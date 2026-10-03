@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+/* Skin tokens: one flow kit, five skins (Figma collection "Skin", Step 17).
+   Viettel Money, Shopee and Grab values are placeholders pending the D-40 audit;
+   Sổ Bán Hàng is sampled from the user-supplied reference (S-085). */
+:root,
+[data-skin="console"] {
+  --brand: #0b2a5b;
+  --brand-soft: #e8eef8;
+  --on-brand: #ffffff;
+  --page: #f3f5f9;
+  --card: #ffffff;
+  --ink: #0f172a;
+  --muted: #475569;
+  --line: #d8dee9;
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+  --info: #2563eb;
+}
+[data-skin="viettel"] {
+  --brand: #d6002f; --brand-soft: #fde6ea; --on-brand: #ffffff; --page: #f5f5f7; --card: #ffffff;
+  --ink: #1a1a1a; --muted: #566070; --line: #e5e7eb;
+}
+[data-skin="shopee"] {
+  --brand: #d0381b; --brand-soft: #fdeeea; --on-brand: #ffffff; --page: #f5f5f5; --card: #ffffff;
+  --ink: #222222; --muted: #666666; --line: #e8e8e8;
+}
+[data-skin="grab"] {
+  --brand: #00803a; --brand-soft: #e6f7ee; --on-brand: #ffffff; --page: #f4f6f5; --card: #ffffff;
+  --ink: #1a1a1a; --muted: #4f5b55; --line: #e1e7e4;
+}
+[data-skin="sbh"] {
+  --brand: #0f7d43; --brand-soft: #e3f4ea; --on-brand: #ffffff; --page: #f4f6f5; --card: #ffffff;
+  --ink: #1f2a24; --muted: #56615a; --line: #e3e8e5; --danger: #a41c1c;
+}
+
+@theme inline {
+  --color-primary: var(--brand);
+  --color-primary-soft: var(--brand-soft);
+  --color-primary-foreground: var(--on-brand);
+  --color-page: var(--page);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
+html, body { background: #e9ecef; color: var(--ink); font-family: var(--font-inter), system-ui, sans-serif; }
+body { -webkit-font-smoothing: antialiased; }
+@keyframes shimmer { 0% { opacity: .55 } 50% { opacity: 1 } 100% { opacity: .55 } }
+.skeleton { background: var(--line); border-radius: 8px; animation: shimmer 1.4s ease-in-out infinite; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
