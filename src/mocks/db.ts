@@ -1,9 +1,9 @@
-import type { ApiCall, ConsentReceipt, Contract, Decision, Instalment, Loan, ManualCase, Policy, ProductType, ScenarioName, RankingWeights } from "@/api/types";
+import type { ApiCall, Appeal, ConsentReceipt, Contract, Decision, Instalment, Loan, Policy, ProductType, ScenarioName, RankingWeights } from "@/api/types";
 import { CUSTOMERS, SEED_RECEIPTS, WEIGHTS } from "./fixtures";
 import { money } from "./engine";
 
 const KEY = "hlb-creditpulse-demo";
-const VERSION = 4;
+const VERSION = 6;
 
 export interface StoredOffer {
   offerRequestId: string;
@@ -33,8 +33,6 @@ export interface DB {
   version: number;
   scenario: ScenarioName;
   errorOp?: string;
-  /** Recent payout incomes per loan (AC-25.2: two drops of more than 50% scale deductions down). */
-  payouts?: Record<string, number[]>;
   emptyMode: boolean;
   consents: ConsentReceipt[];
   ekyc: Record<string, { status: "PASSED" | "FAILED" | "RETRY"; attempts: number; verificationId: string }>;
@@ -42,11 +40,14 @@ export interface DB {
   decisions: Record<string, StoredDecision>;
   contracts: Record<string, StoredContract>;
   loans: (Loan & { principal: number; orderRef?: string })[];
-  manual: ManualCase[];
+  /** Customer-requested reassessments (R-25, D-78); the AI decision itself is never edited. */
+  appeals: (Appeal & { customerRef: string })[];
   calls: ApiCall[];
   policy: Policy;
   weights: RankingWeights;
   audit: { at: string; actor: string; action: string; detail: string }[];
+  drafts?: { policyVersionId: string; productType: string; versionNo: number; status: string; config: Record<string, unknown>; createdBy: string; reason: string }[];
+  approvals?: { approvalId: string; kind: string; targetId: string; diff: Record<string, unknown>; reason: string; makerId: string; status: string; expiresAt: string; comment: string }[];
 }
 
 let db: DB | null = null;
@@ -60,21 +61,21 @@ export function addDays(base: Date, n: number): Date {
 }
 const dateOnly = (d: Date) => d.toISOString().slice(0, 10);
 
-export function makeSchedule(opts: { months: number; total: number; paid: number; weekly?: boolean; start?: Date }): Instalment[] {
-  const n = opts.weekly ? Math.round((opts.months * 52) / 12) : opts.months;
+export function makeSchedule(opts: { months: number; total: number; paid: number; start?: Date }): Instalment[] {
+  const n = opts.months;
   const each = Math.round(opts.total / n / 1000) * 1000;
   const start = opts.start ?? new Date();
   return Array.from({ length: n }, (_, i) => ({
     number: i + 1,
-    dueDate: dateOnly(addDays(start, opts.weekly ? 7 * (i + 1) : 30 * (i + 1))),
+    dueDate: dateOnly(addDays(start, 30 * (i + 1))),
     amount: money(i === n - 1 ? opts.total - each * (n - 1) : each),
     status: i < opts.paid ? ("PAID" as const) : ("DUE" as const),
   }));
 }
 
-function seedLoan(o: { ref: string; partner: string; product: ProductType; principal: number; total: number; months: number; paid: number; weekly?: boolean; orderRef?: string; eir: number }) {
+function seedLoan(o: { ref: string; partner: string; product: ProductType; principal: number; total: number; months: number; paid: number; orderRef?: string; eir: number }) {
   const start = addDays(new Date(), -30 * o.paid);
-  const schedule = makeSchedule({ months: o.months, total: o.total, paid: o.paid, weekly: o.weekly, start });
+  const schedule = makeSchedule({ months: o.months, total: o.total, paid: o.paid, start });
   const remainingTotal = schedule.filter((s) => s.status !== "PAID").reduce((a, s) => a + s.amount.amount, 0);
   return {
     loanId: newId(), customerRef: o.ref, partnerId: o.partner as never, productType: o.product, status: "ACTIVE" as const,
@@ -87,48 +88,49 @@ function seed(): DB {
   const loans = [
     seedLoan({ ref: "cus_khoa", partner: "viettel-money", product: "PAYMENT_INSTALLMENT", principal: 8_500_000, total: 8_925_000, months: 6, paid: 3, eir: 0.098, orderRef: "SPE-2026-0107" }),
     seedLoan({ ref: "cus_mai_loan", partner: "viettel-money", product: "PAYMENT_INSTALLMENT", principal: 12_000_000, total: 12_000_000, months: 6, paid: 1, eir: 0, orderRef: "SPE-2026-0001" }),
-    seedLoan({ ref: "cus_hung_loan", partner: "grab", product: "DRIVER_INSTANT_LOAN", principal: 8_000_000, total: 8_880_000, months: 12, paid: 18, weekly: true, eir: 0.216 }),
-    seedLoan({ ref: "cus_phung_loan", partner: "so-ban-hang", product: "SELLER_FUNDING", principal: 30_000_000, total: 33_000_000, months: 12, paid: 2, eir: 0.195 }),
+    seedLoan({ ref: "cus_hung_loan", partner: "grab", product: "PAYMENT_INSTALLMENT", principal: 8_000_000, total: 8_400_000, months: 9, paid: 3, eir: 0.097, orderRef: "SPE-2026-0131" }),
+    seedLoan({ ref: "cus_phung_loan", partner: "so-ban-hang", product: "PAYMENT_INSTALLMENT", principal: 15_000_000, total: 15_000_000, months: 6, paid: 2, eir: 0, orderRef: "SPE-2026-0152" }),
     ...[0, 1, 2].map((k) => seedLoan({ ref: "cus_an", partner: "viettel-money", product: "PAYMENT_INSTALLMENT", principal: 3_000_000 + k * 500_000, total: 3_150_000 + k * 525_000, months: 6, paid: 1, eir: 0.098, orderRef: `SPE-2026-02${k}` })),
   ];
   // An's second loan has one instalment a day late (AC-21.3, AC-15.2).
   const lateLoan = loans.filter((l) => l.customerRef === "cus_an")[0];
   const lateItem = lateLoan?.schedule.find((x) => x.status === "DUE");
   if (lateItem) { lateItem.status = "LATE"; lateItem.dueDate = dateOnly(addDays(new Date(), -1)); }
-  // Phụng's loan sits at day 45 of the 60-day minimum window (AC-28.2): a settlement resets it.
-  const pl = loans.find((l) => l.customerRef === "cus_phung_loan");
-  const pItem = pl?.schedule.find((x) => x.status === "DUE");
-  if (pItem) pItem.dueDate = dateOnly(addDays(new Date(), 15));
-  // Hùng's loan: current week is a zero-income week (SCR-46).
-  const hl = loans.find((l) => l.customerRef === "cus_hung_loan")!;
-  const cur = hl.schedule.find((s) => s.status === "DUE");
-  if (cur) { cur.amount = money(0); cur.status = "PAUSED"; }
-
-  const mk = (ref: string, partner: string, product: ProductType, amount: number, outcome: Decision["outcome"], tier: Decision["tier"], latency: number, daysAgo: number): StoredDecision => ({
-    decisionId: newId(), outcome, tier, latencyMs: latency, decidedAt: addDays(now, -daysAgo).toISOString(), customerRef: ref, partnerId: partner, productType: product, amount,
-    approvedAmount: outcome === "APPROVED" ? money(amount) : undefined, tenorMonths: 6, reasonCodes: [], explanationText: "", dataUsed: [], waterfall: [], ratings: { riskGrade: "B", affordability: money(3_200_000), integrity: "PASS", limit: money(15_000_000) },
+  const mk = (ref: string, partner: string, product: ProductType, amount: number, outcome: Decision["outcome"], latency: number, daysAgo: number, approved?: number): StoredDecision => ({
+    decisionId: newId(), outcome, latencyMs: latency, decidedAt: addDays(now, -daysAgo).toISOString(), customerRef: ref, partnerId: partner, productType: product, amount,
+    requestedAmount: money(amount), approvedAmount: outcome === "DECLINED" ? undefined : money(approved ?? amount), tenorMonths: 6, reasonCodes: [], explanationText: "", dataUsed: [], waterfall: [],
+    ratings: { riskGrade: "B", affordability: money(3_200_000), integrity: "PASS", limit: money(15_000_000) },
+    appealable: outcome !== "APPROVED", appealDeadline: outcome !== "APPROVED" ? addDays(now, 30 - daysAgo).toISOString() : undefined,
   });
   const decisions: StoredDecision[] = [
-    mk("cus_khoa", "viettel-money", "PAYMENT_INSTALLMENT", 8_500_000, "APPROVED", "STP", 800, 6),
-    mk("cus_tung", "viettel-money", "PAYMENT_INSTALLMENT", 2_000_000, "APPROVED", "STP", 2400, 5),
-    mk("cus_hung_loan", "grab", "DRIVER_INSTANT_LOAN", 8_000_000, "APPROVED", "STP", 2100, 4),
-    mk("cus_phung_loan", "so-ban-hang", "SELLER_FUNDING", 30_000_000, "APPROVED", "STP", 2600, 3),
-    mk("cus_binh", "viettel-money", "PAYMENT_INSTALLMENT", 45_000_000, "MANUAL_REVIEW", "MANUAL", 0, 1),
-    mk("cus_lan", "grab", "DRIVER_INSTANT_LOAN", 12_000_000, "MANUAL_REVIEW", "MANUAL", 0, 1),
-    mk("cus_chi", "viettel-money", "PAYMENT_INSTALLMENT", 18_000_000, "DECLINED", "STP", 1700, 2),
+    mk("cus_khoa", "viettel-money", "PAYMENT_INSTALLMENT", 8_500_000, "APPROVED", 800, 6),
+    mk("cus_tung", "viettel-money", "PAYMENT_INSTALLMENT", 2_000_000, "APPROVED", 2400, 5),
+    mk("cus_hung_loan", "grab", "PAYMENT_INSTALLMENT", 8_000_000, "APPROVED", 2100, 4),
+    mk("cus_phung_loan", "so-ban-hang", "PAYMENT_INSTALLMENT", 15_000_000, "APPROVED", 2600, 3),
+    mk("cus_binh", "viettel-money", "PAYMENT_INSTALLMENT", 45_000_000, "COUNTER_OFFER", 2900, 1, 20_000_000),
+    mk("cus_lan", "grab", "PAYMENT_INSTALLMENT", 12_000_000, "DECLINED", 1900, 3),
+    mk("cus_chi", "viettel-money", "PAYMENT_INSTALLMENT", 18_000_000, "DECLINED", 1700, 4),
   ];
-  decisions[4].reasonCodes = ["NEEDS_REVIEW", "DEVICE_SHARED"];
-  const manual: ManualCase[] = [
-    { caseId: newId(), decisionId: decisions[4].decisionId, slaDueAt: addDays(now, 0).toISOString(), status: "OPEN", suggestedAction: "Cần xem thu nhập; thiết bị dùng chung" },
-    { caseId: newId(), decisionId: decisions[5].decisionId, slaDueAt: new Date(now.getTime() + 3.6 * 3_600_000).toISOString(), status: "OPEN", suggestedAction: "Duyệt" },
-    { caseId: newId(), decisionId: decisions[4].decisionId, slaDueAt: new Date(now.getTime() - 35 * 60_000).toISOString(), status: "OPEN", suggestedAction: "Duyệt (doanh số ổn định)" },
+  decisions[4].reasonCodes = ["DEVICE_SHARED"]; decisions[4].ratings.integrity = "REVIEW";
+  decisions[4].explanationText = "Thiết bị này được nhiều người dùng để đăng ký vay, nên số tiền được duyệt thấp hơn đề nghị.";
+  decisions[5].reasonCodes = ["INCOME_LOW"]; decisions[5].explanationText = "Thu nhập ước tính chưa đủ so với khoản trả hằng tháng.";
+  decisions[6].reasonCodes = ["AFFORDABILITY"]; decisions[6].explanationText = "Khoản trả hằng tháng vượt khả năng chi trả ước tính (mức trần DTI).";
+  const ap = (d: StoredDecision, ref: string, hoursAgo: number, dueInHours: number, note: string, extra: Partial<Appeal> = {}) => ({
+    appealId: newId(), referenceNo: `HLB-XL-2026-000${120 + Math.round(hoursAgo)}`, decisionId: d.decisionId, customerRef: ref, customerMask: `cus_…${ref.replace("cus_", "").slice(0, 6)}`,
+    partnerId: d.partnerId as never, productType: d.productType, aiOutcome: d.outcome, requestedAmount: money(d.amount), aiAmount: d.approvedAmount, reasonCodes: d.reasonCodes, note, channel: "PARTNER_APP" as const,
+    status: "OPEN" as const, createdAt: new Date(now.getTime() - hoursAgo * 3_600_000).toISOString(), dueAt: new Date(now.getTime() + dueInHours * 3_600_000).toISOString(), slaState: "GREEN" as const, ...extra,
+  });
+  const appeals = [
+    ap(decisions[4], "cus_binh", 6, 30, "Điện thoại này là của gia đình tôi, mọi người dùng chung. Tôi có lương ổn định, mong HLB xem xét lại."),
+    ap(decisions[5], "cus_lan", 52, -4, "Tháng trước tôi nghỉ ốm hai tuần nên thu nhập giảm. Bình thường tôi chạy đều mỗi ngày."),
+    ap(decisions[6], "cus_chi", 70, -22, "Tôi vừa được tăng lương.", { status: "OVERTURNED" as const, outcome: "OVERTURNED" as const, outcomeReasonCode: "INCOME_VERIFIED", newOffer: money(18_000_000), decidedBy: "reviewer.demo@hlb", decidedAt: addDays(now, -1).toISOString(), offerValidUntil: addDays(now, 6).toISOString() }),
   ];
   return {
     version: VERSION, scenario: "APPROVE", emptyMode: false,
     consents: SEED_RECEIPTS(), ekyc: {}, offers: {}, decisions: Object.fromEntries(decisions.map((d) => [d.decisionId, d])), contracts: {},
-    loans, manual, calls: [],
+    loans, appeals, calls: [],
     policy: { dtiCap: 0.35, maxOpenLoans: 3, cicRefreshOnLimitChange: true, testBandShare: 0.03, championModel: "v1", rungCaps: [3, 8, 15, 30, 50].map((m) => money(m * 1_000_000)) },
-    weights: { ...WEIGHTS }, audit: [],
+    weights: { ...WEIGHTS }, audit: [], drafts: [], approvals: [],
   };
 }
 

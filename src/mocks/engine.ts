@@ -24,10 +24,9 @@ export function eirFor(principal: number, payment: number, months: number): numb
 
 /* ---------- products ---------- */
 interface TenorDef { months: number; markup: number; merchantPays?: boolean }
+/** One product for every wallet (R-28, D-81). */
 const TENORS: Record<ProductType, TenorDef[]> = {
   PAYMENT_INSTALLMENT: [{ months: 6, markup: 0, merchantPays: true }, { months: 9, markup: 0.05 }, { months: 12, markup: 0.085 }],
-  DRIVER_INSTANT_LOAN: [{ months: 6, markup: 0.055 }, { months: 12, markup: 0.11 }, { months: 18, markup: 0.165 }],
-  SELLER_FUNDING: [{ months: 8, markup: 0.075 }, { months: 12, markup: 0.1 }],
 };
 
 export function buildPackages(product: ProductType, amount: number, limit: number): Package[] {
@@ -108,7 +107,8 @@ export function nextSuggestion(ctx: Ctx): NextRung | undefined {
   const cur = rungReached(ctx);
   const next = defs.find((d) => d.rung > cur.rung);
   if (!next) return undefined;
-  const cands = next.sources.filter((s) => !BASELINE.includes(s) && !usable(ctx, s));
+  // A source that is connected but still too thin (new driver or shop) is not suggested again; its rung says when to come back.
+  const cands = next.sources.filter((s) => !BASELINE.includes(s) && !usable(ctx, s) && !(ctx.connected.has(s) && ctx.insufficient.has(s)));
   if (!cands.length) return undefined;
   cands.sort((a, b) => SOURCE_BY_ID[a].rank - SOURCE_BY_ID[b].rank || a.localeCompare(b));
   const s = cands[0];
@@ -207,24 +207,34 @@ export function assess(i: AssessInput): Omit<Decision, "decisionId" | "decidedAt
     .filter((s) => !ctx.insufficient.has(s))
     .sort((a, b) => SOURCE_BY_ID[a].rank - SOURCE_BY_ID[b].rank)
     .map((s) => sourceUse(s, true));
-  const ratings = { riskGrade: ctx.customer.riskGrade, affordability: money(af), integrity: "PASS" as const, limit: money(limit) };
-  const base = { tier: "STP" as const, waterfall, dataUsed, ratings, latencyMs: latency, nextRung: nextSuggestion(ctx) };
+  const ratings = { riskGrade: ctx.customer.riskGrade, affordability: money(af), integrity: (ctx.scenario === "COUNTER_OFFER" ? "REVIEW" : "PASS") as "PASS" | "REVIEW", limit: money(limit) };
+  // The engine always decides within the 10 s cap (R-25, D-77, D-79): approve, counter-offer or decline. Never "pending review".
+  const base = { waterfall, dataUsed, ratings, latencyMs: Math.min(latency, 9_500), nextRung: nextSuggestion(ctx), requestedAmount: money(i.amount) };
   const retryAfter = new Date(Date.now() + 30 * 86_400_000).toISOString();
+  const appeal = { appealable: true, appealDeadline: retryAfter };
+  const floor100k = (n: number) => Math.floor(n / 100_000) * 100_000;
+  const minAmount = RANGE.min;
+  const counter = (amount: number, codes: string[], text: string) => ({ ...base, ...appeal, outcome: "COUNTER_OFFER" as const, approvedAmount: money(amount), tenorMonths: tenor, reasonCodes: codes, explanationText: text, retryAfter });
 
   if (i.openLoans >= i.maxOpenLoans) {
-    return { ...base, outcome: "DECLINED", reasonCodes: ["STACKING_LIMIT"], explanationText: `Bạn đang có ${i.openLoans} khoản trả góp. Hoàn tất một khoản để vay thêm.`, retryAfter };
-  }
-  if (ctx.scenario === "MANUAL_REVIEW") {
-    return { ...base, tier: "MANUAL", outcome: "MANUAL_REVIEW", reasonCodes: ["NEEDS_REVIEW", "DEVICE_SHARED"], explanationText: "Hồ sơ cần xem thêm. Chúng tôi sẽ báo kết quả trong vòng 4 giờ làm việc." };
+    return { ...base, ...appeal, outcome: "DECLINED", reasonCodes: ["STACKING_LIMIT"], explanationText: `Bạn đang có ${i.openLoans} khoản trả góp. Hoàn tất một khoản để vay thêm.`, retryAfter };
   }
   if (ctx.scenario === "NOT_APPROVED") {
-    return { ...base, outcome: "DECLINED", reasonCodes: ["INCOME_LOW"], explanationText: "Thu nhập ước tính chưa đủ so với khoản trả hằng tháng.", retryAfter };
+    return { ...base, ...appeal, outcome: "DECLINED", reasonCodes: ["INCOME_LOW"], explanationText: "Thu nhập ước tính chưa đủ so với khoản trả hằng tháng.", retryAfter };
+  }
+  if (ctx.scenario === "COUNTER_OFFER") {
+    // Fraud signal: the device was used by several applicants in 24 h; the engine caps the amount instead of referring (AC-11.2).
+    const capped = Math.max(minAmount, floor100k(Math.min(limit, i.amount) * 0.6));
+    return counter(capped, ["DEVICE_SHARED"], "Thiết bị này được nhiều người dùng để đăng ký vay, nên số tiền được duyệt thấp hơn đề nghị.");
   }
   if (i.amount > limit) {
-    return { ...base, outcome: "DECLINED", reasonCodes: ["LIMIT_EXCEEDED"], explanationText: "Số tiền vượt hạn mức hiện tại. Bạn có thể chọn gói nhỏ hơn hoặc kết nối thêm dữ liệu.", retryAfter };
+    if (limit >= minAmount) return counter(limit, ["LIMIT_EXCEEDED"], "Số tiền đề nghị vượt hạn mức hiện tại. HLB duyệt trong hạn mức của bạn.");
+    return { ...base, ...appeal, outcome: "DECLINED", reasonCodes: ["LIMIT_EXCEEDED"], explanationText: "Số tiền vượt hạn mức hiện tại. Bạn có thể chọn gói nhỏ hơn hoặc kết nối thêm dữ liệu.", retryAfter };
   }
   if (af > 0 && monthly > af) {
-    return { ...base, outcome: "DECLINED", reasonCodes: ["AFFORDABILITY"], explanationText: "Khoản trả hằng tháng vượt khả năng chi trả ước tính (mức trần DTI).", retryAfter };
+    const fit = floor100k((i.amount * af) / monthly);
+    if (fit >= minAmount) return counter(fit, ["AFFORDABILITY"], "Khoản trả hằng tháng vượt khả năng chi trả ước tính. HLB duyệt số tiền phù hợp với thu nhập của bạn.");
+    return { ...base, ...appeal, outcome: "DECLINED", reasonCodes: ["AFFORDABILITY"], explanationText: "Khoản trả hằng tháng vượt khả năng chi trả ước tính (mức trần DTI).", retryAfter };
   }
   const why: Record<string, string> = {
     "AD-01": "ví của bạn có thu nhập đều đặn 12 tháng",
@@ -244,6 +254,7 @@ export function assess(i: AssessInput): Omit<Decision, "decisionId" | "decidedAt
     tenorMonths: tenor,
     reasonCodes: dataUsed.map((d) => `${d.sourceId}_OK`),
     explanationText: text,
+    appealable: false,
   };
 }
 

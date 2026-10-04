@@ -3,12 +3,11 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ScenarioName } from "@/api/types";
 
-export const DEFAULT_ORDER = { orderRef: "SPE-2026-0001", amount: 12_000_000, title: 'Laptop 14" Ryzen 5 / 16GB / 512GB', short: 'Laptop 14" Ryzen 5', shop: "TechZone Official Store" };
+const DEFAULT_ORDER_AMOUNT = 12_000_000;
 
 interface FlowState {
   persona: string;
   scenario: ScenarioName;
-  mockBadge: boolean;
   inspectorOpen: boolean;
   entry?: string;
   ekycDone: Record<string, boolean>;
@@ -24,7 +23,7 @@ interface FlowState {
   reset: () => void;
 }
 
-const initial = { persona: "cus_mai", scenario: "APPROVE" as ScenarioName, mockBadge: true, inspectorOpen: false, ekycDone: {} as Record<string, boolean>, orderAmount: DEFAULT_ORDER.amount };
+const initial = { persona: "cus_mai", scenario: "APPROVE" as ScenarioName, inspectorOpen: false, ekycDone: {} as Record<string, boolean>, orderAmount: DEFAULT_ORDER_AMOUNT };
 
 export const useFlow = create<FlowState>()(
   persist(

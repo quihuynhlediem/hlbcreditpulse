@@ -276,40 +276,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/webhooks/payouts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Grab → CreditPulse: payout cycle income (F-08) */
-        post: operations["receivePayoutEvent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/webhooks/settlements": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Sổ Bán Hàng → CreditPulse: settlement received (F-07) */
-        post: operations["receiveSettlementEvent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/customers/{customerRef}/graduation-offer": {
         parameters: {
             query?: never;
@@ -353,43 +319,8 @@ export interface paths {
         };
         /** Alternative-data ranking and weights (R-16, D-20) */
         get: operations["getRanking"];
-        /** Edit weights (must sum to 1) */
-        put: operations["updateRankingWeights"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/console/manual-queue": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Manual tier queue */
-        get: operations["listManualCases"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/console/manual-queue/{caseId}/resolution": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Approve or decline a manual case */
-        post: operations["resolveManualCase"];
         delete?: never;
         options?: never;
         head?: never;
@@ -456,8 +387,7 @@ export interface paths {
         };
         /** Guardrail policy (F-06) */
         get: operations["getPolicy"];
-        /** Edit guardrail policy; logged */
-        put: operations["updatePolicy"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -475,7 +405,8 @@ export interface paths {
         /** Partners and products */
         get: operations["listPartners"];
         put?: never;
-        post?: never;
+        /** Create a partner (terms need approval) */
+        post: operations["createPartner"];
         delete?: never;
         options?: never;
         head?: never;
@@ -499,17 +430,1384 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/console/api-calls": {
+    "/api/v1/console/audit-log": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** API inspector timeline */
-        get: operations["listApiCalls"];
+        /** Audit log of operator changes (who, when, what) */
+        get: operations["listAuditLog"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/checkout-eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Is HLB instalment payment available for this order, and the entry-component content */
+        post: operations["checkCheckoutEligibility"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content-packs/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consent texts, disclosures, reason-code texts and contract template (vi/en) */
+        get: operations["getContentPack"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/offers/{offerRequestId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a pending application (customer cancel or order hold expired) */
+        post: operations["cancelApplication"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contracts/{contractId}/otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send the HLB signing OTP to the eKYC-verified phone */
+        post: operations["requestSigningOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/loans/{loanId}/hardship-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Customer asks for hardship help */
+        post: operations["createHardshipRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hardship-offers/{offerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hardship offer to show the customer */
+        get: operations["getHardshipOffer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hardship-offers/{offerId}/otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send the OTP to accept a hardship plan */
+        post: operations["requestHardshipOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hardship-offers/{offerId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept a hardship plan with OTP */
+        post: operations["acceptHardshipOffer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open a complaint, dispute or data request on behalf of a customer */
+        post: operations["createCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cases/{caseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status of a case the partner opened */
+        get: operations["getCaseStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicing/otp-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request a sign-in OTP (same response whatever the match result) */
+        post: operations["requestServicingOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicing/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify the OTP and start a short session */
+        post: operations["createServicingSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicing/sessions/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Sign out */
+        delete: operations["endServicingSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicing/loans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** All my HLB loans across partners */
+        get: operations["listMyLoans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicing/loans/{loanId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Schedule, payments, documents and repayment account */
+        get: operations["getMyLoan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicing/loans/{loanId}/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Contract or statement PDF */
+        get: operations["downloadMyDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicing/loans/{loanId}/settlement-quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Early-settlement quote with VietQR details */
+        get: operations["getMySettlementQuote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicing/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My requests and their status */
+        get: operations["listMyRequests"];
+        put?: never;
+        /** Raise a complaint, dispute, data-rights or hardship request */
+        post: operations["createMyRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicing/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My contact preferences */
+        get: operations["getMyPreferences"];
+        /** Update my contact preferences (required notices stay on) */
+        put: operations["updateMyPreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicing/consents/{receiptId}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw a data-sharing consent from the servicing channel */
+        post: operations["withdrawMyConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Signed-in staff member, roles and landing screen */
+        get: operations["getStaffProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stage metrics, guardrails, STP, latency and source health */
+        get: operations["getOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Open alerts */
+        get: operations["listAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Find customers by phone, CCCD or loan ID (masked) */
+        get: operations["searchCustomers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/customers/{customerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Loans, decisions, consents, cases and notices for one customer */
+        get: operations["getCustomer360"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/notices/{noticeId}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend a notice */
+        post: operations["resendNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notice delivery log */
+        get: operations["listNotices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/decisions/{decisionId}/unmask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unmask one field with a reason (role-gated, audited) */
+        post: operations["unmaskDecisionField"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/policy-versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Policy versions per product */
+        get: operations["listPolicyVersions"];
+        put?: never;
+        /** Create a draft from the active or a given version */
+        post: operations["createPolicyDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/policy-versions/{versionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One policy version */
+        get: operations["getPolicyVersion"];
+        /** Edit a draft (validation per AC-63.3) */
+        put: operations["updatePolicyDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/policy-versions/{versionId}/impact-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recompute approval rate, average limit and loss band on the last 30 days */
+        post: operations["previewPolicyImpact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/policy-versions/{versionId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a draft for approval */
+        post: operations["submitPolicyVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/policy-versions/{versionId}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request reinstating this earlier version (through approval) */
+        post: operations["requestPolicyRollback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pending approvals for the signed-in checker */
+        get: operations["listApprovals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/approvals/{approvalId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve (never your own change) */
+        post: operations["approveChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/approvals/{approvalId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject with a comment */
+        post: operations["rejectChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/staff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff and their roles */
+        get: operations["listStaff"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/staff/{staffId}/role-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Grant a role (pending approval) */
+        post: operations["requestRoleGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/staff/{staffId}/role-grants/{grantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a role */
+        delete: operations["revokeRoleGrant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/audit-log/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Export filtered audit entries (the export is audited) */
+        post: operations["exportAuditLog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Collections queue by bucket */
+        get: operations["listCollectionsCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/collections/{caseId}/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Log a contact (borrower only; hours and frequency enforced) */
+        post: operations["logCollectionContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/collections/{caseId}/hardship-offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Offer a holiday or restructure (second approver above authority) */
+        post: operations["offerHardshipPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/collections/{caseId}/handoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hand the loan to HLB recovery (through approval) */
+        post: operations["requestRecoveryHandoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Case queue with SLA states */
+        get: operations["listCases"];
+        put?: never;
+        /** Record a case received by the hotline */
+        post: operations["createHotlineCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/cases/{caseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Case with links and history */
+        get: operations["getCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/cases/{caseId}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign to me or another officer */
+        post: operations["assignCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/cases/{caseId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve and respond through the original channel */
+        post: operations["resolveCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/cases/{caseId}/data-package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assemble the data-access/export package or deletion result */
+        post: operations["prepareDataPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/partners/{partnerId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause, resume, go live or exit (kill switch; approval except emergency pause) */
+        post: operations["changePartnerStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/partners/{partnerId}/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue or rotate credentials (secret shown once) */
+        post: operations["issuePartnerCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/partners/{partnerId}/certification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Certification checklist and results */
+        get: operations["getCertification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/partners/{partnerId}/certification/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run the automated API checks against the partner sandbox */
+        post: operations["runApiCertification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/partners/{partnerId}/certification/items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Record a screen-check result */
+        put: operations["updateCertificationItem"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/partners/{partnerId}/api-calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per-partner API call log (sandbox and production) */
+        get: operations["listPartnerApiCalls"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/partners/{partnerId}/webhook-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Outgoing webhook deliveries and retries */
+        get: operations["listWebhookDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/reconciliation/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daily runs per partner */
+        get: operations["listReconciliationRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/reconciliation/runs/{runId}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Items and exceptions of a run */
+        get: operations["listReconciliationItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/reconciliation/items/{itemId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Adjust (through approval) or mark as timing */
+        post: operations["resolveReconciliationItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** MDR invoices and revenue-share statements */
+        get: operations["listInvoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/invoices/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate month-end invoices and statements for approval */
+        post: operations["generateInvoices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report catalogue */
+        get: operations["listReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/reports/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate or schedule a report */
+        post: operations["runReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/reports/runs/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report status and download link (role-gated, audited) */
+        get: operations["getReportRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/regulatory-feeds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** CIC and regulatory feed status (via core banking) */
+        get: operations["listRegulatoryFeeds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/data-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Source status, latency, errors, cost, consent coverage */
+        get: operations["listDataSourceHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/data-sources/{sourceId}/toggle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Emergency disable/enable (post-hoc approval) */
+        post: operations["toggleDataSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/fairness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Approval and pricing ratios by group and source */
+        get: operations["getFairnessReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Model registry */
+        get: operations["listModels"];
+        put?: never;
+        /** Register a model trained offline (ONNX) */
+        post: operations["registerModel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/models/{modelVersionId}/validation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Attach the independent validation report */
+        post: operations["attachModelValidation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/models/{modelVersionId}/mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Shadow / challenger / champion / retire (through approval) */
+        post: operations["requestModelModeChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/notice-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Notice templates (vi/en, versioned) */
+        get: operations["listNoticeTemplates"];
+        put?: never;
+        /** Draft a template change (approval required) */
+        post: operations["createNoticeTemplateDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/decisions/{decisionId}/appeals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Customer asks for a human reassessment of a counter-offer or decline (D-78) */
+        post: operations["createAppeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appeals/{appealId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Appeal status for the partner app */
+        get: operations["getAppeal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicing/decisions/{decisionId}/appeals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request a reassessment from the servicing channel */
+        post: operations["createMyAppeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicing/appeals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My appeals and their status */
+        get: operations["listMyAppeals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/appeals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Appeals queue (customer-requested reassessments) */
+        get: operations["listAppeals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/appeals/{appealId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Uphold or overturn the AI decision (above authority: pending a checker) */
+        post: operations["decideAppeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/appeals/{appealId}/information-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask the customer for more information (pauses the clock) */
+        post: operations["requestAppealInformation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/console/cases/{caseId}/appeal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open a decision dispute as an appeal */
+        post: operations["openAppealFromCase"];
         delete?: never;
         options?: never;
         head?: never;
@@ -550,15 +1848,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/console/audit-log": {
+    "/api/v1/console/api-calls": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Audit log of operator changes (who, when, what) */
-        get: operations["listAuditLog"];
+        /** API inspector timeline */
+        get: operations["listApiCalls"];
         put?: never;
         post?: never;
         delete?: never;
@@ -568,7 +1866,127 @@ export interface paths {
         trace?: never;
     };
 }
-export type webhooks = Record<string, never>;
+export interface webhooks {
+    "loan.booked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Loan booked and disbursed; order can be confirmed */
+        post: operations["webhookLoanBooked"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "loan.updated": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Schedule or balance changed (repayment, refund, restructuring, settlement) */
+        post: operations["webhookLoanUpdated"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "decision.updated": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Appeal outcome: the AI decision was upheld or overturned (new offer) */
+        post: operations["webhookDecisionUpdated"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "application.cancelled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Application cancelled or booking failed */
+        post: operations["webhookApplicationCancelled"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "notice.requested": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Show this notice in-app (HLB also sends required notices by SMS/email) */
+        post: operations["webhookNoticeRequested"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "partner.status_changed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Partner or product paused, resumed or exiting */
+        post: operations["webhookPartnerStatusChanged"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "case.updated": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A case the partner opened was answered or closed */
+        post: operations["webhookCaseUpdated"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+}
 export interface components {
     schemas: {
         Problem: {
@@ -593,7 +2011,7 @@ export interface components {
          * @description D-37: one API, three product types
          * @enum {string}
          */
-        ProductType: "PAYMENT_INSTALLMENT" | "DRIVER_INSTANT_LOAN" | "SELLER_FUNDING";
+        ProductType: "PAYMENT_INSTALLMENT";
         /** @enum {string} */
         Segment: "SEG-1" | "SEG-2" | "SEG-3" | "SEG-4" | "SEG-5";
         /**
@@ -605,10 +2023,11 @@ export interface components {
         RatingOutput: "RG" | "AF" | "IN" | "LM";
         /** @enum {string} */
         InterestPayer: "CUSTOMER" | "MERCHANT";
-        /** @enum {string} */
-        DecisionOutcome: "APPROVED" | "DECLINED" | "MANUAL_REVIEW";
-        /** @enum {string} */
-        DecisionTier: "STP" | "MANUAL";
+        /**
+         * @description The engine always decides (D-77); there is no pending or referred outcome
+         * @enum {string}
+         */
+        DecisionOutcome: "APPROVED" | "COUNTER_OFFER" | "DECLINED";
         /** @enum {string} */
         ConsentStatus: "GRANTED" | "WITHDRAWN";
         /** @enum {string} */
@@ -617,8 +2036,6 @@ export interface components {
         EkycStatus: "PASSED" | "FAILED" | "RETRY";
         /** @enum {string} */
         LoanStatus: "ACTIVE" | "PAUSED" | "LATE" | "SETTLED";
-        /** @enum {string} */
-        ScenarioName: "APPROVE" | "THIN_FILE" | "NOT_APPROVED" | "MANUAL_REVIEW" | "SLOW" | "EKYC_FAIL" | "SOURCE_DOWN" | "SESSION_EXPIRED";
         SourceUse: {
             sourceId: components["schemas"]["SourceId"];
             name: string;
@@ -768,7 +2185,6 @@ export interface components {
             /** Format: uuid */
             decisionId: string;
             outcome: components["schemas"]["DecisionOutcome"];
-            tier: components["schemas"]["DecisionTier"];
             approvedAmount?: components["schemas"]["Money"];
             tenorMonths?: number;
             reasonCodes: string[];
@@ -782,6 +2198,13 @@ export interface components {
             latencyMs: number;
             /** Format: date-time */
             decidedAt: string;
+            appealStatus?: components["schemas"]["AppealStatus"];
+            requestedAmount?: components["schemas"]["Money"];
+            /** @description True for COUNTER_OFFER and DECLINED within 30 days and without an appeal (D-78) */
+            appealable?: boolean;
+            /** Format: date-time */
+            appealDeadline?: string;
+            appeal?: components["schemas"]["AppealSummary"];
         };
         ContractCreate: {
             /** Format: uuid */
@@ -853,26 +2276,6 @@ export interface components {
             pauseUntil: string;
             adverseCicReported?: boolean;
         };
-        PayoutEvent: {
-            /** Format: uuid */
-            loanId: string;
-            cycleId: string;
-            incomeAmount: components["schemas"]["Money"];
-        };
-        DeductionResult: {
-            /** Format: uuid */
-            loanId: string;
-            cycleId: string;
-            deducted: components["schemas"]["Money"];
-            reason?: string;
-            remaining?: components["schemas"]["Money"];
-        };
-        SettlementEvent: {
-            /** Format: uuid */
-            loanId: string;
-            settlementId: string;
-            grossAmount: components["schemas"]["Money"];
-        };
         GraduationOffer: {
             customerRef: string;
             newLimit: components["schemas"]["Money"];
@@ -887,10 +2290,10 @@ export interface components {
             productType: components["schemas"]["ProductType"];
             amount: components["schemas"]["Money"];
             outcome: components["schemas"]["DecisionOutcome"];
-            tier: components["schemas"]["DecisionTier"];
             latencyMs: number;
             /** Format: date-time */
             decidedAt: string;
+            appealStatus?: components["schemas"]["AppealStatus"];
         };
         DecisionPage: {
             items: components["schemas"]["DecisionSummary"][];
@@ -926,22 +2329,6 @@ export interface components {
                 segment?: components["schemas"]["Segment"];
                 rungs?: components["schemas"]["SourceId"][][];
             }[];
-        };
-        ManualCase: {
-            /** Format: uuid */
-            caseId: string;
-            /** Format: uuid */
-            decisionId: string;
-            /** Format: date-time */
-            slaDueAt: string;
-            /** @enum {string} */
-            status: "OPEN" | "RESOLVED";
-            suggestedAction: string;
-        };
-        ManualResolution: {
-            /** @enum {string} */
-            action: "APPROVE" | "DECLINE";
-            reasonCode: string;
         };
         LearningLoop: {
             testBandShare: number;
@@ -993,6 +2380,806 @@ export interface components {
             settlementAccountMask: string;
             sandboxKeyMask: string;
         };
+        AuditEntry: {
+            /** Format: date-time */
+            at: string;
+            /** @description e.g. ranking.weights, policy.update, appeal.decide, learning.promote */
+            action: string;
+            /** @description Operator who made the change */
+            actor: string;
+            detail: string;
+        };
+        /** @enum {string} */
+        Role: "OPERATOR" | "REVIEWER" | "POLICY_MAKER" | "CHECKER" | "COLLECTIONS" | "CASE_OFFICER" | "FINANCE_OPS" | "PARTNERSHIP" | "INTEGRATION" | "MODEL_DEVELOPER" | "VALIDATOR" | "RISK_HEAD" | "COMPLIANCE" | "HOTLINE" | "ADMIN" | "AUDITOR";
+        /** @enum {string} */
+        CaseType: "COMPLAINT" | "DISPUTE" | "DATA_ACCESS" | "DATA_EXPORT" | "DATA_CORRECTION" | "DATA_DELETION" | "CONSENT_WITHDRAWAL" | "HARDSHIP";
+        /** @enum {string} */
+        CaseStatus: "OPEN" | "ASSIGNED" | "WAITING_CUSTOMER" | "RESOLVED" | "CLOSED";
+        /** @enum {string} */
+        PartnerStatus: "draft" | "sandbox" | "certified" | "live" | "paused" | "exiting" | "exited";
+        /** @enum {string} */
+        ApprovalKind: "POLICY_VERSION" | "PARTNER_TERMS" | "PARTNER_STATUS" | "CREDENTIAL" | "ROLE_GRANT" | "RECON_ADJUSTMENT" | "INVOICE" | "MODEL_MODE" | "NOTICE_TEMPLATE" | "HARDSHIP_OFFER" | "APPEAL_OVERTURN" | "SOURCE_TOGGLE" | "HANDOFF";
+        /** @enum {string} */
+        Language: "vi" | "en";
+        EligibilityCheck: {
+            partnerId: components["schemas"]["PartnerId"];
+            productType: components["schemas"]["ProductType"];
+            orderAmount: components["schemas"]["Money"];
+            customerRef?: string;
+        };
+        /**
+         * @example {
+         *       "eligible": true,
+         *       "entryComponent": {
+         *         "vi": "Trả góp qua HLB"
+         *       },
+         *       "teaser": null
+         *     }
+         */
+        EligibilityResult: {
+            eligible: boolean;
+            /** @description Content-pack strings for the HLB entry component (vi/en) */
+            entryComponent?: {
+                [key: string]: unknown;
+            };
+            /** @description Only with a valid pre-screen (DD-09) */
+            teaser?: components["schemas"]["Money"] | null;
+            reason?: string;
+        };
+        ContentPack: {
+            version: string;
+            language: components["schemas"]["Language"];
+            consentTexts?: {
+                [key: string]: unknown;
+            };
+            disclosures?: {
+                [key: string]: unknown;
+            };
+            reasonCodeTexts?: {
+                [key: string]: unknown;
+            };
+            contractTemplate?: string;
+        };
+        CancelApplication: {
+            /** @enum {string} */
+            reason: "CUSTOMER_CANCELLED" | "ORDER_EXPIRED" | "PARTNER_TIMEOUT";
+        };
+        OtpRequestResult: {
+            /** Format: uuid */
+            challengeId: string;
+            /** Format: date-time */
+            expiresAt: string;
+            maskedPhone?: string;
+        };
+        HardshipRequest: {
+            reason: string;
+            incomeEvidenceOptions?: string[];
+            /** @enum {string} */
+            channel: "PARTNER" | "SERVICING_CHANNEL" | "HOTLINE";
+        };
+        HardshipOffer: {
+            /** Format: uuid */
+            offerId: string;
+            /** Format: uuid */
+            loanId: string;
+            /** @enum {string} */
+            kind: "PAYMENT_HOLIDAY" | "RESTRUCTURE";
+            newSchedule?: components["schemas"]["Instalment"][];
+            totalCostChange: components["schemas"]["Money"];
+            /** Format: date-time */
+            expiresAt?: string;
+            status?: string;
+        };
+        HardshipAcceptance: {
+            /** Format: uuid */
+            otpChallengeId: string;
+            otpCode: string;
+        };
+        CaseCreate: {
+            type: components["schemas"]["CaseType"];
+            /** Format: uuid */
+            loanId?: string;
+            /** Format: uuid */
+            decisionId?: string;
+            description: string;
+            /** @enum {string} */
+            channel: "PARTNER" | "SERVICING_CHANNEL" | "HOTLINE";
+            customerRef?: string;
+        };
+        /**
+         * @example {
+         *       "caseId": "0b8c…",
+         *       "referenceNo": "HLB-YC-2026-000123",
+         *       "respondBy": "2026-10-19T17:00:00+07:00"
+         *     }
+         */
+        CaseRef: {
+            /** Format: uuid */
+            caseId: string;
+            referenceNo: string;
+            /** Format: date-time */
+            respondBy: string;
+        };
+        Case: {
+            /** Format: uuid */
+            caseId: string;
+            referenceNo: string;
+            type: components["schemas"]["CaseType"];
+            channel?: string;
+            status: components["schemas"]["CaseStatus"];
+            /** Format: date-time */
+            slaDueAt: string;
+            /** @enum {string} */
+            slaState?: "GREEN" | "AMBER" | "RED";
+            /** Format: uuid */
+            loanId?: string;
+            /** Format: uuid */
+            decisionId?: string;
+            /** Format: uuid */
+            assigneeId?: string;
+            events?: {
+                [key: string]: unknown;
+            }[];
+            outcomeCode?: string;
+        };
+        CaseResolution: {
+            outcomeCode: string;
+            response: string;
+        };
+        DataPackage: {
+            /** Format: uuid */
+            packageId: string;
+            contents?: string[];
+            retainedItems?: {
+                category?: string;
+                legalBasis?: string;
+                /** Format: date */
+                until?: string;
+            }[];
+            downloadUrl?: string;
+        };
+        /** @description Outgoing webhook envelope; partners ignore events with a sequence lower than the last applied (AC-45.2) */
+        PartnerEvent: {
+            eventId: string;
+            type: string;
+            sequence: number;
+            /** Format: date-time */
+            occurredAt: string;
+            data: {
+                [key: string]: unknown;
+            };
+        };
+        ServicingOtpRequest: {
+            phone: string;
+            nationalIdLast6: string;
+            language?: components["schemas"]["Language"];
+        };
+        ServicingSessionCreate: {
+            /** Format: uuid */
+            challengeId: string;
+            otpCode: string;
+        };
+        ServicingSession: {
+            accessToken: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        LoanDetail: {
+            loan: components["schemas"]["Loan"];
+            schedule: components["schemas"]["Instalment"][];
+            payments?: {
+                [key: string]: unknown;
+            }[];
+            documents?: {
+                documentId?: string;
+                kind?: string;
+                /** Format: date-time */
+                issuedAt?: string;
+            }[];
+            partnerId?: components["schemas"]["PartnerId"];
+            repaymentAccount?: {
+                accountNo?: string;
+                vietQrPayload?: string;
+            };
+        };
+        Preferences: {
+            email?: string;
+            language: components["schemas"]["Language"];
+            optionalChannels?: string[];
+            requiredNotices?: string[];
+        };
+        StaffProfile: {
+            /** Format: uuid */
+            staffId: string;
+            displayName?: string;
+            roles: components["schemas"]["Role"][];
+            landing?: string;
+        };
+        Overview: {
+            period: string;
+            stageMetrics?: {
+                [key: string]: unknown;
+            }[];
+            guardrails?: {
+                [key: string]: unknown;
+            }[];
+            stpRate?: number;
+            latencyP95Ms?: number;
+            sourceHealth?: {
+                [key: string]: unknown;
+            }[];
+            alerts?: components["schemas"]["Alert"][];
+        };
+        Alert: {
+            /** Format: uuid */
+            alertId: string;
+            metricCode: string;
+            /** @enum {string} */
+            severity: "AMBER" | "RED";
+            scope?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            openedAt?: string;
+        };
+        CustomerSummary: {
+            /** Format: uuid */
+            customerId: string;
+            maskedName?: string;
+            maskedPhone?: string;
+            loans?: number;
+            openCases?: number;
+        };
+        Customer360: {
+            /** Format: uuid */
+            customerId: string;
+            maskedName?: string;
+            loans?: components["schemas"]["Loan"][];
+            decisions?: components["schemas"]["DecisionSummary"][];
+            consents?: components["schemas"]["ConsentReceipt"][];
+            cases?: components["schemas"]["Case"][];
+            notices?: {
+                [key: string]: unknown;
+            }[];
+        };
+        UnmaskRequest: {
+            field: string;
+            reason: string;
+        };
+        PolicyVersion: {
+            /** Format: uuid */
+            policyVersionId: string;
+            productType: components["schemas"]["ProductType"];
+            versionNo: number;
+            status: string;
+            config: {
+                [key: string]: unknown;
+            };
+            impactPreview?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            effectiveFrom?: string;
+            /** Format: uuid */
+            createdBy?: string;
+            /** Format: uuid */
+            approvedBy?: string;
+        };
+        PolicyDraft: {
+            productType: components["schemas"]["ProductType"];
+            /** Format: uuid */
+            basedOn?: string;
+            config: {
+                [key: string]: unknown;
+            };
+            reason?: string;
+        };
+        PolicySubmit: {
+            reason: string;
+            /** Format: date-time */
+            effectiveFrom?: string;
+        };
+        ImpactPreview: {
+            window: string;
+            approvalRate?: number;
+            averageLimit?: components["schemas"]["Money"];
+            expectedLossBand?: string;
+        };
+        ApprovalRequest: {
+            /** Format: uuid */
+            approvalId: string;
+            kind: components["schemas"]["ApprovalKind"];
+            targetId?: string;
+            diff?: {
+                [key: string]: unknown;
+            };
+            reason?: string;
+            /** Format: uuid */
+            makerId?: string;
+            status: string;
+            /** Format: date-time */
+            expiresAt?: string;
+        };
+        ApprovalDecision: {
+            comment?: string;
+        };
+        StaffUser: {
+            /** Format: uuid */
+            staffId: string;
+            displayName?: string;
+            active?: boolean;
+            roles?: {
+                /** Format: uuid */
+                grantId?: string;
+                role?: components["schemas"]["Role"];
+                status?: string;
+                authorityLimit?: components["schemas"]["Money"];
+            }[];
+        };
+        RoleGrantCreate: {
+            role: components["schemas"]["Role"];
+            authorityLimit?: components["schemas"]["Money"];
+            reason: string;
+        };
+        CollectionsCase: {
+            /** Format: uuid */
+            collectionsCaseId: string;
+            /** Format: uuid */
+            loanId: string;
+            dpd: number;
+            bucket?: string;
+            status?: string;
+            nextContactWindow?: {
+                /** Format: date-time */
+                from?: string;
+                /** Format: date-time */
+                to?: string;
+            };
+            contacts?: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** @description Only the borrower can be contacted; contacts outside allowed hours or above the daily limit are rejected with 422 contact-rule (AC-47.3) */
+        ContactLog: {
+            /** @enum {string} */
+            channel: "SMS" | "CALL" | "EMAIL" | "PARTNER_PUSH";
+            outcome: string;
+            /** Format: date */
+            promiseToPayDate?: string;
+        };
+        HardshipOfferCreate: {
+            /** @enum {string} */
+            kind: "PAYMENT_HOLIDAY" | "RESTRUCTURE";
+            terms: {
+                [key: string]: unknown;
+            };
+            reason?: string;
+        };
+        HandoffCreate: {
+            reason: string;
+        };
+        PartnerCreate: {
+            partnerId: string;
+            legalName: string;
+            products: components["schemas"]["ProductType"][];
+            revenueShareBps?: number;
+            mdrBps?: number;
+            exposureLimit?: components["schemas"]["Money"];
+        };
+        PartnerStatusChange: {
+            status: components["schemas"]["PartnerStatus"];
+            /** Format: date-time */
+            effectiveAt?: string;
+            reason: string;
+            /** @enum {string} */
+            scope?: "PARTNER" | "PRODUCT";
+            productType?: components["schemas"]["ProductType"];
+        };
+        CredentialIssue: {
+            /** @enum {string} */
+            environment: "sandbox" | "production";
+            mtlsCertificatePem: string;
+        };
+        CredentialSecret: {
+            /** Format: uuid */
+            credentialId: string;
+            clientId: string;
+            /** @description Shown once (AC-65.2) */
+            clientSecret: string;
+            /** Format: date-time */
+            oldCredentialValidUntil?: string;
+        };
+        CertificationItem: {
+            /** Format: uuid */
+            itemId: string;
+            ref: string;
+            /** @enum {string} */
+            kind: "api" | "screen";
+            /** @enum {string} */
+            result: "pending" | "pass" | "fail";
+            evidenceUrl?: string;
+            comment?: string;
+        };
+        CertificationReport: {
+            partnerId: components["schemas"]["PartnerId"];
+            productType?: components["schemas"]["ProductType"];
+            items: components["schemas"]["CertificationItem"][];
+            passed: boolean;
+        };
+        CertificationUpdate: {
+            /** @enum {string} */
+            result: "pass" | "fail";
+            evidenceUrl?: string;
+            comment?: string;
+        };
+        PartnerApiCall: {
+            /** Format: uuid */
+            callId: string;
+            method: string;
+            path: string;
+            status: number;
+            latencyMs?: number;
+            idempotencyKey?: string;
+            /** Format: date-time */
+            at?: string;
+        };
+        WebhookDelivery: {
+            /** Format: uuid */
+            deliveryId: string;
+            eventType: string;
+            status: string;
+            attempts?: number;
+            lastStatusCode?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        ReconciliationRun: {
+            /** Format: uuid */
+            runId: string;
+            partnerId: components["schemas"]["PartnerId"];
+            /** Format: date */
+            businessDate: string;
+            status: string;
+            matchedCount?: number;
+            exceptionCount?: number;
+        };
+        ReconciliationItem: {
+            /** Format: uuid */
+            itemId: string;
+            kind: string;
+            amount: components["schemas"]["Money"];
+            status: string;
+            cause?: string;
+            refs?: {
+                [key: string]: unknown;
+            };
+        };
+        ReconciliationResolution: {
+            /** @enum {string} */
+            resolution: "ADJUSTMENT" | "TIMING";
+            adjustment?: components["schemas"]["Money"];
+            reason: string;
+        };
+        Invoice: {
+            /** Format: uuid */
+            invoiceId: string;
+            partnerId: components["schemas"]["PartnerId"];
+            kind: string;
+            period?: string;
+            total: components["schemas"]["Money"];
+            status: string;
+            lines?: {
+                [key: string]: unknown;
+            }[];
+        };
+        InvoiceGenerate: {
+            period: string;
+        };
+        ReportDefinition: {
+            code: string;
+            name: string;
+            containsPii?: boolean;
+        };
+        ReportRunCreate: {
+            code: string;
+            parameters?: {
+                [key: string]: unknown;
+            };
+            schedule?: string;
+        };
+        ReportRun: {
+            /** Format: uuid */
+            runId: string;
+            code: string;
+            status: string;
+            downloadUrl?: string;
+        };
+        RegulatoryFeed: {
+            feed: string;
+            /** Format: date-time */
+            lastRunAt?: string;
+            status: string;
+            /** Format: date-time */
+            nextRunAt?: string;
+        };
+        DataSourceHealth: {
+            sourceId: components["schemas"]["SourceId"];
+            status: string;
+            latencyP95Ms?: number;
+            errorRate?: number;
+            costPerCall?: components["schemas"]["Money"];
+            consentCoverage?: number;
+            /** Format: date-time */
+            lastIngestionAt?: string;
+            emergencyDisabled?: boolean;
+        };
+        SourceToggle: {
+            disable: boolean;
+            reason: string;
+        };
+        FairnessReport: {
+            period: string;
+            groups?: {
+                [key: string]: unknown;
+            }[];
+            breaches?: {
+                [key: string]: unknown;
+            }[];
+        };
+        ModelVersion: {
+            /** Format: uuid */
+            modelVersionId: string;
+            name: string;
+            versionLabel: string;
+            artefactSha256?: string;
+            mode: string;
+            trafficShareBps?: number;
+            performance?: {
+                [key: string]: unknown;
+            };
+            fairness?: {
+                [key: string]: unknown;
+            };
+            documentationUri?: string;
+            validationReportUri?: string;
+        };
+        ModelRegister: {
+            name: string;
+            versionLabel: string;
+            artefactUri: string;
+            artefactSha256: string;
+            dataWindow?: string;
+            features?: string[];
+            performance?: {
+                [key: string]: unknown;
+            };
+            fairness?: {
+                [key: string]: unknown;
+            };
+            documentationUri: string;
+        };
+        ModelValidation: {
+            validationReportUri: string;
+            conclusion: string;
+        };
+        ModelModeChange: {
+            /** @enum {string} */
+            mode: "shadow" | "challenger" | "champion" | "retired";
+            trafficShareBps?: number;
+            reason: string;
+        };
+        NoticeTemplate: {
+            templateId: string;
+            versionNo: number;
+            language: components["schemas"]["Language"];
+            channel: string;
+            body: string;
+            requiredVariables?: string[];
+            legallyRequired?: boolean;
+            status?: string;
+        };
+        NoticeTemplateDraft: {
+            templateId: string;
+            language: components["schemas"]["Language"];
+            channel: string;
+            body: string;
+            reason?: string;
+        };
+        NoticeRecord: {
+            /** Format: uuid */
+            noticeId: string;
+            templateId: string;
+            channel?: string;
+            status: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            deliveredAt?: string;
+        };
+        LoanPage: {
+            items: components["schemas"]["Loan"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        CasePage: {
+            items: components["schemas"]["Case"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        AlertPage: {
+            items: components["schemas"]["Alert"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        CustomerSummaryPage: {
+            items: components["schemas"]["CustomerSummary"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        NoticeRecordPage: {
+            items: components["schemas"]["NoticeRecord"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        PolicyVersionPage: {
+            items: components["schemas"]["PolicyVersion"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        ApprovalRequestPage: {
+            items: components["schemas"]["ApprovalRequest"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        StaffUserPage: {
+            items: components["schemas"]["StaffUser"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        CollectionsCasePage: {
+            items: components["schemas"]["CollectionsCase"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        PartnerApiCallPage: {
+            items: components["schemas"]["PartnerApiCall"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        WebhookDeliveryPage: {
+            items: components["schemas"]["WebhookDelivery"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        ReconciliationRunPage: {
+            items: components["schemas"]["ReconciliationRun"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        ReconciliationItemPage: {
+            items: components["schemas"]["ReconciliationItem"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        InvoicePage: {
+            items: components["schemas"]["Invoice"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        ReportDefinitionPage: {
+            items: components["schemas"]["ReportDefinition"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        RegulatoryFeedPage: {
+            items: components["schemas"]["RegulatoryFeed"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        DataSourceHealthPage: {
+            items: components["schemas"]["DataSourceHealth"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        ModelVersionPage: {
+            items: components["schemas"]["ModelVersion"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        NoticeTemplatePage: {
+            items: components["schemas"]["NoticeTemplate"][];
+            page: number;
+            size: number;
+            totalItems: number;
+        };
+        /** @enum {string} */
+        AppealStatus: "NONE" | "OPEN" | "INFO_REQUESTED" | "PENDING_SECOND_APPROVAL" | "UPHELD" | "OVERTURNED";
+        /** @enum {string} */
+        AppealOutcome: "UPHELD" | "OVERTURNED";
+        AppealSummary: {
+            /** Format: uuid */
+            appealId: string;
+            referenceNo: string;
+            status: components["schemas"]["AppealStatus"];
+            /** Format: date-time */
+            dueAt: string;
+            newOffer?: components["schemas"]["Money"];
+            /** Format: date-time */
+            offerValidUntil?: string;
+            message?: string;
+        };
+        AppealRequest: {
+            note?: string;
+            documentIds?: string[];
+        };
+        Appeal: {
+            /** Format: uuid */
+            appealId: string;
+            referenceNo: string;
+            /** Format: uuid */
+            decisionId: string;
+            customerMask?: string;
+            partnerId?: components["schemas"]["PartnerId"];
+            productType?: components["schemas"]["ProductType"];
+            aiOutcome: components["schemas"]["DecisionOutcome"];
+            requestedAmount?: components["schemas"]["Money"];
+            aiAmount?: components["schemas"]["Money"];
+            reasonCodes?: string[];
+            note?: string;
+            /** @enum {string} */
+            channel?: "PARTNER_APP" | "SERVICING_CHANNEL" | "HOTLINE" | "CASE";
+            status: components["schemas"]["AppealStatus"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            dueAt: string;
+            /** @enum {string} */
+            slaState: "GREEN" | "AMBER" | "RED";
+            /** Format: uuid */
+            assigneeId?: string;
+            outcome?: components["schemas"]["AppealOutcome"];
+            outcomeReasonCode?: string;
+            newOffer?: components["schemas"]["Money"];
+            decidedBy?: string;
+            /** Format: date-time */
+            decidedAt?: string;
+            /** Format: uuid */
+            pendingApprovalId?: string;
+            /** Format: date-time */
+            offerValidUntil?: string;
+        };
+        AppealResolution: {
+            outcome: components["schemas"]["AppealOutcome"];
+            reasonCode: string;
+            newOfferAmount?: components["schemas"]["Money"];
+            comment?: string;
+        };
+        AppealInfoRequest: {
+            message: string;
+        };
+        ScenarioSet: {
+            scenario: components["schemas"]["ScenarioName"];
+        };
+        /** @enum {string} */
+        ScenarioName: "APPROVE" | "THIN_FILE" | "NOT_APPROVED" | "COUNTER_OFFER" | "SLOW" | "EKYC_FAIL" | "SOURCE_DOWN" | "SESSION_EXPIRED";
         ApiCall: {
             /** Format: uuid */
             callId: string;
@@ -1012,21 +3199,98 @@ export interface components {
             /** Format: date-time */
             at: string;
         };
-        ScenarioSet: {
-            scenario: components["schemas"]["ScenarioName"];
+    };
+    responses: {
+        /** @description Invalid request */
+        Problem400: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
         };
-        AuditEntry: {
-            /** Format: date-time */
-            at: string;
-            /** @description e.g. ranking.weights, policy.update, manual.resolve, learning.promote */
-            action: string;
-            /** @description Operator who made the change */
-            actor: string;
-            detail: string;
+        /** @description Not authenticated */
+        Problem401: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Not allowed for this client or role */
+        Problem403: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Not found */
+        Problem404: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Conflict with current state */
+        Problem409: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Gone (e.g. session-expired) */
+        Problem410: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Business rule violated (problem type names the rule) */
+        Problem422: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Rate limited */
+        Problem429: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Temporarily unavailable (e.g. partner-paused, otp-unavailable) */
+        Problem503: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
         };
     };
-    responses: never;
-    parameters: never;
+    parameters: {
+        /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+        IdempotencyKey: string;
+        /** @description HMAC-SHA256 over timestamp + body with the endpoint signing secret; stale or reused events are rejected (AC-33.4) */
+        Signature: string;
+        Page: number;
+        Size: number;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -1036,7 +3300,10 @@ export interface operations {
     createPrescreen: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1090,7 +3357,10 @@ export interface operations {
     createOfferRequest: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1305,7 +3575,10 @@ export interface operations {
     createConsent: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1391,7 +3664,10 @@ export interface operations {
     withdrawConsent: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 receiptId: string;
             };
@@ -1422,7 +3698,10 @@ export interface operations {
     createEkycVerification: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1587,7 +3866,10 @@ export interface operations {
     createAssessment: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1841,7 +4123,10 @@ export interface operations {
     createContract: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -1911,7 +4196,10 @@ export interface operations {
     signContract: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 contractId: string;
             };
@@ -2001,7 +4289,10 @@ export interface operations {
     createPayment: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 loanId: string;
             };
@@ -2075,7 +4366,10 @@ export interface operations {
     receiveRefundEvent: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description HMAC-SHA256 over timestamp + body with the endpoint signing secret; stale or reused events are rejected (AC-33.4) */
+                "X-CreditPulse-Signature": components["parameters"]["Signature"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -2114,92 +4408,6 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["RefundResult"];
-                };
-            };
-            /** @description Problem */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    receivePayoutEvent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "loanId": "a2000000-0000-4000-8000-000000000002",
-                 *       "cycleId": "2026-W40",
-                 *       "incomeAmount": {
-                 *         "amount": 0,
-                 *         "currency": "VND"
-                 *       }
-                 *     }
-                 */
-                "application/json": components["schemas"]["PayoutEvent"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeductionResult"];
-                };
-            };
-            /** @description Problem */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    receiveSettlementEvent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "loanId": "a3000000-0000-4000-8000-000000000003",
-                 *       "settlementId": "stl_001",
-                 *       "grossAmount": {
-                 *         "amount": 4000000,
-                 *         "currency": "VND"
-                 *       }
-                 *     }
-                 */
-                "application/json": components["schemas"]["SettlementEvent"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeductionResult"];
                 };
             };
             /** @description Problem */
@@ -2338,118 +4546,6 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["Ranking"];
-                };
-            };
-            /** @description Problem */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    updateRankingWeights: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "predictive": 0.3,
-                 *       "coverage": 0.25,
-                 *       "cost": 0.15,
-                 *       "access": 0.15,
-                 *       "legal": 0.15
-                 *     }
-                 */
-                "application/json": components["schemas"]["RankingWeights"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Ranking"];
-                };
-            };
-            /** @description Problem */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    listManualCases: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ManualCase"][];
-                };
-            };
-            /** @description Problem */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    resolveManualCase: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                caseId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "action": "APPROVE",
-                 *       "reasonCode": "DOC_CONFIRMED"
-                 *     }
-                 */
-                "application/json": components["schemas"]["ManualResolution"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ManualCase"];
                 };
             };
             /** @description Problem */
@@ -2609,46 +4705,6 @@ export interface operations {
             };
         };
     };
-    updatePolicy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                /**
-                 * @example {
-                 *       "dtiCap": 0.35,
-                 *       "maxOpenLoans": 3,
-                 *       "cicRefreshOnLimitChange": true
-                 *     }
-                 */
-                "application/json": components["schemas"]["Policy"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Policy"];
-                };
-            };
-            /** @description Problem */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
     listPartners: {
         parameters: {
             query?: never;
@@ -2677,14 +4733,14 @@ export interface operations {
                      *         "partnerId": "grab",
                      *         "name": "Grab",
                      *         "products": [
-                     *           "DRIVER_INSTANT_LOAN"
+                     *           "PAYMENT_INSTALLMENT"
                      *         ]
                      *       },
                      *       {
                      *         "partnerId": "so-ban-hang",
                      *         "name": "Sổ Bán Hàng",
                      *         "products": [
-                     *           "SELLER_FUNDING"
+                     *           "PAYMENT_INSTALLMENT"
                      *         ]
                      *       }
                      *     ]
@@ -2701,6 +4757,34 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    createPartner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerCreate"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            409: components["responses"]["Problem409"];
         };
     };
     sendTestWebhook: {
@@ -2720,7 +4804,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiCall"];
+                    "application/json": components["schemas"]["WebhookDelivery"];
                 };
             };
             /** @description Problem */
@@ -2734,10 +4818,396 @@ export interface operations {
             };
         };
     };
-    listApiCalls: {
+    listAuditLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEntry"][];
+                };
+            };
+        };
+    };
+    checkCheckoutEligibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EligibilityCheck"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EligibilityResult"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            503: components["responses"]["Problem503"];
+        };
+    };
+    getContentPack: {
         parameters: {
             query?: {
-                flow?: string;
+                language?: components["schemas"]["Language"];
+            };
+            header?: never;
+            path: {
+                version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContentPack"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    cancelApplication: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                offerRequestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelApplication"];
+            };
+        };
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    requestSigningOtp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                contractId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtpRequestResult"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            429: components["responses"]["Problem429"];
+            503: components["responses"]["Problem503"];
+        };
+    };
+    createHardshipRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                loanId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HardshipRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseRef"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    getHardshipOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                offerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HardshipOffer"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    requestHardshipOtp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                offerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtpRequestResult"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            429: components["responses"]["Problem429"];
+            503: components["responses"]["Problem503"];
+        };
+    };
+    acceptHardshipOffer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                offerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HardshipAcceptance"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Loan"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            410: components["responses"]["Problem410"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    createCase: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required on every partner write call (AC-35.2, AC-35.4) */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseCreate"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseRef"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    getCaseStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Case"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    requestServicingOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServicingOtpRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtpRequestResult"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            429: components["responses"]["Problem429"];
+        };
+    };
+    createServicingSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServicingSessionCreate"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServicingSession"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            429: components["responses"]["Problem429"];
+        };
+    };
+    endServicingSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem401"];
+        };
+    };
+    listMyLoans: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
             };
             header?: never;
             path?: never;
@@ -2751,18 +5221,2002 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiCall"][];
+                    "application/json": components["schemas"]["LoanPage"];
                 };
             };
-            /** @description Problem */
-            default: {
+            401: components["responses"]["Problem401"];
+        };
+    };
+    getMyLoan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                loanId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["Problem"];
+                    "application/json": components["schemas"]["LoanDetail"];
                 };
             };
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    downloadMyDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                loanId: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    getMySettlementQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                loanId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettlementQuote"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+            503: components["responses"]["Problem503"];
+        };
+    };
+    listMyRequests: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CasePage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+        };
+    };
+    createMyRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseCreate"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseRef"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    getMyPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Preferences"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+        };
+    };
+    updateMyPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Preferences"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Preferences"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    withdrawMyConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                receiptId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentReceipt"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    getStaffProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffProfile"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+        };
+    };
+    getOverview: {
+        parameters: {
+            query?: {
+                period?: string;
+                partnerId?: components["schemas"]["PartnerId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Overview"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    listAlerts: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    searchCustomers: {
+        parameters: {
+            query: {
+                q: string;
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerSummaryPage"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    getCustomer360: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Customer360"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    resendNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                noticeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeRecord"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    listNotices: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeRecordPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    unmaskDecisionField: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnmaskRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionSummary"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    listPolicyVersions: {
+        parameters: {
+            query?: {
+                productType?: components["schemas"]["ProductType"];
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyVersionPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    createPolicyDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyDraft"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyVersion"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    getPolicyVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyVersion"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    updatePolicyDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyDraft"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyVersion"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    previewPolicyImpact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpactPreview"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    submitPolicyVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicySubmit"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    requestPolicyRollback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicySubmit"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    listApprovals: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequestPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    approveChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approvalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalDecision"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    rejectChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approvalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalDecision"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    listStaff: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffUserPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    requestRoleGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                staffId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleGrantCreate"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    revokeRoleGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                staffId: string;
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    exportAuditLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportRun"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    listCollectionsCases: {
+        parameters: {
+            query?: {
+                bucket?: string;
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionsCasePage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    logCollectionContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactLog"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionsCase"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    offerHardshipPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HardshipOfferCreate"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HardshipOffer"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    requestRecoveryHandoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoffCreate"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    listCases: {
+        parameters: {
+            query?: {
+                type?: components["schemas"]["CaseType"];
+                status?: components["schemas"]["CaseStatus"];
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CasePage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    createHotlineCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseCreate"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseRef"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    getCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Case"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    assignCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Case"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    resolveCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseResolution"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Case"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    prepareDataPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataPackage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    changePartnerStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerStatusChange"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    issuePartnerCredential: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CredentialIssue"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialSecret"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    getCertification: {
+        parameters: {
+            query?: {
+                productType?: components["schemas"]["ProductType"];
+            };
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CertificationReport"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    runApiCertification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CertificationReport"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    updateCertificationItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CertificationUpdate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CertificationItem"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    listPartnerApiCalls: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerApiCallPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    listWebhookDeliveries: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    listReconciliationRuns: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRunPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    listReconciliationItems: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationItemPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    resolveReconciliationItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconciliationResolution"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationItem"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    listInvoices: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoicePage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    generateInvoices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceGenerate"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportRun"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    listReports: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportDefinitionPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    runReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportRunCreate"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportRun"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    getReportRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportRun"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    listRegulatoryFeeds: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegulatoryFeedPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    listDataSourceHealth: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataSourceHealthPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    toggleDataSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceToggle"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataSourceHealth"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    getFairnessReport: {
+        parameters: {
+            query?: {
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FairnessReport"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    listModels: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersionPage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    registerModel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelRegister"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersion"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    attachModelValidation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                modelVersionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelValidation"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelVersion"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    requestModelModeChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                modelVersionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelModeChange"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    listNoticeTemplates: {
+        parameters: {
+            query?: {
+                page?: components["parameters"]["Page"];
+                size?: components["parameters"]["Size"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeTemplatePage"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    createNoticeTemplateDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeTemplateDraft"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequest"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    createAppeal: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "note": "Tôi có thu nhập lương ổn định, mong HLB xem xét lại."
+                 *     }
+                 */
+                "application/json": components["schemas"]["AppealRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppealSummary"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    getAppeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appealId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppealSummary"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+        };
+    };
+    createMyAppeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppealRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppealSummary"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    listMyAppeals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppealSummary"][];
+                };
+            };
+            401: components["responses"]["Problem401"];
+        };
+    };
+    listAppeals: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["AppealStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appeal"][];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+        };
+    };
+    decideAppeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appealId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "outcome": "OVERTURNED",
+                 *       "reasonCode": "INCOME_VERIFIED",
+                 *       "newOfferAmount": {
+                 *         "amount": 12000000,
+                 *         "currency": "VND"
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["AppealResolution"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appeal"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            422: components["responses"]["Problem422"];
+        };
+    };
+    requestAppealInformation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appealId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppealInfoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appeal"];
+                };
+            };
+            400: components["responses"]["Problem400"];
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+        };
+    };
+    openAppealFromCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appeal"];
+                };
+            };
+            401: components["responses"]["Problem401"];
+            403: components["responses"]["Problem403"];
+            404: components["responses"]["Problem404"];
+            409: components["responses"]["Problem409"];
+            422: components["responses"]["Problem422"];
         };
     };
     setDemoScenario: {
@@ -2828,9 +7282,11 @@ export interface operations {
             };
         };
     };
-    listAuditLog: {
+    listApiCalls: {
         parameters: {
-            query?: never;
+            query?: {
+                flow?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2843,8 +7299,192 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuditEntry"][];
+                    "application/json": components["schemas"]["ApiCall"][];
                 };
+            };
+            /** @description Problem */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    webhookLoanBooked: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description HMAC-SHA256 over timestamp + body with the endpoint signing secret; stale or reused events are rejected (AC-33.4) */
+                "X-CreditPulse-Signature": components["parameters"]["Signature"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerEvent"];
+            };
+        };
+        responses: {
+            /** @description Partner acknowledges; any non-2xx is retried with backoff (AC-41.3) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhookLoanUpdated: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description HMAC-SHA256 over timestamp + body with the endpoint signing secret; stale or reused events are rejected (AC-33.4) */
+                "X-CreditPulse-Signature": components["parameters"]["Signature"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerEvent"];
+            };
+        };
+        responses: {
+            /** @description Partner acknowledges; any non-2xx is retried with backoff (AC-41.3) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhookDecisionUpdated: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description HMAC-SHA256 over timestamp + body with the endpoint signing secret; stale or reused events are rejected (AC-33.4) */
+                "X-CreditPulse-Signature": components["parameters"]["Signature"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerEvent"];
+            };
+        };
+        responses: {
+            /** @description Partner acknowledges; any non-2xx is retried with backoff (AC-41.3) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhookApplicationCancelled: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description HMAC-SHA256 over timestamp + body with the endpoint signing secret; stale or reused events are rejected (AC-33.4) */
+                "X-CreditPulse-Signature": components["parameters"]["Signature"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerEvent"];
+            };
+        };
+        responses: {
+            /** @description Partner acknowledges; any non-2xx is retried with backoff (AC-41.3) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhookNoticeRequested: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description HMAC-SHA256 over timestamp + body with the endpoint signing secret; stale or reused events are rejected (AC-33.4) */
+                "X-CreditPulse-Signature": components["parameters"]["Signature"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerEvent"];
+            };
+        };
+        responses: {
+            /** @description Partner acknowledges; any non-2xx is retried with backoff (AC-41.3) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhookPartnerStatusChanged: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description HMAC-SHA256 over timestamp + body with the endpoint signing secret; stale or reused events are rejected (AC-33.4) */
+                "X-CreditPulse-Signature": components["parameters"]["Signature"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerEvent"];
+            };
+        };
+        responses: {
+            /** @description Partner acknowledges; any non-2xx is retried with backoff (AC-41.3) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhookCaseUpdated: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description HMAC-SHA256 over timestamp + body with the endpoint signing secret; stale or reused events are rejected (AC-33.4) */
+                "X-CreditPulse-Signature": components["parameters"]["Signature"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerEvent"];
+            };
+        };
+        responses: {
+            /** @description Partner acknowledges; any non-2xx is retried with backoff (AC-41.3) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

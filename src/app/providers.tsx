@@ -3,10 +3,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { getDb, saveDb } from "@/mocks/db";
 import type { ScenarioName } from "@/api/types";
+import { t, useLocale } from "@/i18n";
 import { useFlow } from "@/store/flow";
 
 const MOCK = process.env.NEXT_PUBLIC_API_MODE !== "live";
-const SCENARIOS: Record<string, ScenarioName> = { default: "APPROVE", approve: "APPROVE", thin_file: "THIN_FILE", not_approved: "NOT_APPROVED", manual_review: "MANUAL_REVIEW", slow: "SLOW", ekyc_fail: "EKYC_FAIL" };
+const SCENARIOS: Record<string, ScenarioName> = { default: "APPROVE", approve: "APPROVE", thin_file: "THIN_FILE", not_approved: "NOT_APPROVED", counter_offer: "COUNTER_OFFER", slow: "SLOW", ekyc_fail: "EKYC_FAIL" };
 
 /** Some browsers throw when localStorage is touched (blocked site data). The mock layer needs a Storage object, so fall back to memory and flag it (AC-02.3). */
 function ensureStorage() {
@@ -33,7 +34,10 @@ function MswGate({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     (async () => {
       await startWorker();
-      const q = new URLSearchParams(window.location.search).get("scenario");
+      const params = new URLSearchParams(window.location.search);
+      const lang = params.get("lang");
+      if (lang === "vi" || lang === "en") useLocale.getState().setLocale(lang);
+      const q = params.get("scenario");
       const db = getDb();
       if (q) {
         if (q.startsWith("error-")) db.errorOp = q.slice(6);
@@ -47,7 +51,7 @@ function MswGate({ children }: { children: React.ReactNode }) {
     })();
     return () => { cancelled = true; };
   }, []);
-  if (!ready) return <div className="min-h-screen grid place-items-center text-sm text-slate-500" role="status">Đang khởi động dữ liệu mô phỏng…</div>;
+  if (!ready) return <div className="min-h-screen grid place-items-center text-sm text-slate-500" role="status">{t("Đang tải…")}</div>;
   return <>{children}</>;
 }
 

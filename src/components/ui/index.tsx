@@ -1,6 +1,7 @@
 "use client";
 import { cn } from "@/lib/cn";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+import { useT } from "@/i18n";
 
 export function Btn({ variant = "primary", className, children, ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger" | "ghost" }) {
   return (
@@ -61,9 +62,10 @@ export function Skel({ className }: { className?: string }) {
 }
 
 export function Lockup({ className }: { className?: string }) {
+  const t = useT();
   return (
     <div className={cn("flex items-center gap-2 py-1 text-xs text-muted", className)} data-testid="hlb-lockup">
-      <span>Được cung cấp bởi</span>
+      <span>{t("Được cung cấp bởi")}</span>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/hlb-logo.png" alt="Hong Leong Bank" width={88} height={17} className="h-[17px] w-[88px] object-contain" />
     </div>
@@ -79,13 +81,14 @@ export function KV({ k, v, bold, className }: { k: ReactNode; v: ReactNode; bold
   );
 }
 
-export function ErrorBox({ children, onRetry, retryLabel = "Thử lại" }: { children: ReactNode; onRetry?: () => void; retryLabel?: string }) {
+export function ErrorBox({ children, onRetry, retryLabel }: { children: ReactNode; onRetry?: () => void; retryLabel?: string }) {
+  const t = useT();
   return (
     <div role="alert" className="rounded-xl border border-warning bg-card p-3 text-[13px] text-ink">
       <div>{children}</div>
       {onRetry && (
         <button onClick={onRetry} className="mt-2 font-semibold text-primary">
-          {retryLabel}
+          {retryLabel ?? t("Thử lại")}
         </button>
       )}
     </div>

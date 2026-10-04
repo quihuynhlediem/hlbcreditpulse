@@ -1,16 +1,28 @@
 openapi: 3.1.0
 info:
   title: HLB CreditPulse API
-  version: 0.1.4
-  summary: Backend credit engine behind partner wallets (R-17, D-37)
-  description: One API, three product types. Partners own customer screens and call this API; consent text is supplied by HLB and receipts are stored here (D-30). Money is integer VND (no minor unit). Examples use demo personas (Mai, Khoa, Tùng, Hùng, Phụng); amounts are illustrative (D-28). Endpoints tagged `x-mock-only` exist only in the MVP mock.
+  version: 1.2.0
+  summary: HLB CreditPulse — complete product contract (partner, servicing channel and staff console APIs)
+  description: 'One API, one product (D-81): point-of-purchase instalments through three e-wallets — Viettel Money (R1), Grab (R2) and Sổ Bán Hàng (R3). Partners build the customer screens to the Partner
+    UX & Content Specification and call the partner API (OAuth2 client credentials over mTLS). HLB-built surfaces use the servicing-channel API (OTP session) and the staff console API (HLB SSO). Money is
+    integer VND. Examples use seed personas (build-pack/seed-data-spec.md); amounts are illustrative (D-28). Demo-only operations (scenario, reset, API-call inspector) are not part of this contract; the
+    Stage 1 demo keeps them in its own overlay (Step 19). Owner: Step 11. v1.1.0 (R-25, D-77 – D-79): the engine decides 100% of applications (APPROVED, COUNTER_OFFER, DECLINED) within 10 s; the appeal
+    review is replaced by customer-requested appeals. v1.2.0 (R-28, D-81): Grab and Sổ Bán Hàng work like Viettel Money; the driver-loan and seller-funding product types, payout and settlement events are
+    removed.'
   license:
-    name: Proprietary (demo)
+    name: Proprietary — Hong Leong Bank Vietnam
+  x-cross-cutting-stories:
+    US-35: Every partner operation (partnerOAuth + partnerMtls security, Idempotency-Key header, problem+json errors)
+    US-46: Internal daily DPD job (no API); results visible through listCollectionsCases and loan payloads
+    US-50: Static public page of the servicing channel (no API)
 servers:
-- url: https://api.creditpulse.example
-  description: Placeholder; MVP uses MSW
+- url: https://sandbox.api.creditpulse.hlb.example
+  description: Partner sandbox (placeholder host)
+- url: https://api.creditpulse.hlb.example
+  description: Production, HLB Vietnam in-country environment (D-68; placeholder host)
 security:
-- bearerAuth: []
+- partnerOAuth: []
+  partnerMtls: []
 tags:
 - name: pre-screen
 - name: offers
@@ -21,10 +33,10 @@ tags:
 - name: contract
 - name: servicing
 - name: refunds
-- name: income-lending
 - name: graduation
+- name: cases
+- name: servicing-channel
 - name: console
-- name: demo
 paths:
   /api/v1/prescreens:
     post:
@@ -33,6 +45,7 @@ paths:
       - pre-screen
       summary: Indicative limit band from a hashed ID (G-12)
       x-stories:
+      - US-38
       - US-04
       requestBody:
         required: true
@@ -66,6 +79,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
   /api/v1/offers:
     post:
       operationId: createOfferRequest
@@ -75,6 +90,7 @@ paths:
       x-stories:
       - US-06
       - US-07
+      - US-03
       - US-23
       - US-26
       requestBody:
@@ -155,6 +171,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
   /api/v1/offers/{offerRequestId}:
     get:
       operationId: getOfferSet
@@ -163,6 +181,7 @@ paths:
       summary: Fetch an offer set (idempotent replay)
       x-stories:
       - US-06
+      - US-07
       parameters:
       - name: offerRequestId
         in: path
@@ -277,6 +296,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
   /api/v1/customers/{customerRef}/consents:
     get:
       operationId: listConsents
@@ -320,6 +341,7 @@ paths:
         required: true
         schema:
           type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
           description: OK
@@ -371,6 +393,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
   /api/v1/customers/{customerRef}/limit-ladder:
     get:
       operationId: getLimitLadder
@@ -380,6 +404,8 @@ paths:
       x-stories:
       - US-12
       - US-13
+      - US-15
+      - US-77
       parameters:
       - name: customerRef
         in: path
@@ -465,8 +491,11 @@ paths:
       - US-16
       - US-17
       - US-19
+      - US-11
+      - US-12
       - US-24
       - US-27
+      - US-74
       requestBody:
         required: true
         content:
@@ -560,6 +589,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
   /api/v1/decisions/{decisionId}:
     get:
       operationId: getDecision
@@ -702,6 +733,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
   /api/v1/contracts/{contractId}/sign:
     post:
       operationId: signContract
@@ -710,14 +743,16 @@ paths:
       summary: Sign with OTP; books the loan
       x-stories:
       - US-20
+      - US-40
+      - US-41
       - US-05
-      - US-11
       parameters:
       - name: contractId
         in: path
         required: true
         schema:
           type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -790,12 +825,15 @@ paths:
       summary: Repay an instalment
       x-stories:
       - US-21
+      - US-42
+      - US-44
       parameters:
       - name: loanId
         in: path
         required: true
         schema:
           type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -827,6 +865,7 @@ paths:
       summary: Early-settlement quote (no hidden fee)
       x-stories:
       - US-21
+      - US-43
       parameters:
       - name: loanId
         in: path
@@ -887,72 +926,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /api/v1/webhooks/payouts:
-    post:
-      operationId: receivePayoutEvent
-      tags:
-      - income-lending
-      summary: 'Grab → CreditPulse: payout cycle income (F-08)'
-      x-stories:
-      - US-25
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PayoutEvent'
-            example:
-              loanId: a2000000-0000-4000-8000-000000000002
-              cycleId: 2026-W40
-              incomeAmount:
-                amount: 0
-                currency: VND
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeductionResult'
-        default:
-          description: Problem
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-  /api/v1/webhooks/settlements:
-    post:
-      operationId: receiveSettlementEvent
-      tags:
-      - income-lending
-      summary: 'Sổ Bán Hàng → CreditPulse: settlement received (F-07)'
-      x-stories:
-      - US-28
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SettlementEvent'
-            example:
-              loanId: a3000000-0000-4000-8000-000000000003
-              settlementId: stl_001
-              grossAmount:
-                amount: 4000000
-                currency: VND
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeductionResult'
-        default:
-          description: Problem
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
+      parameters:
+      - $ref: '#/components/parameters/Signature'
   /api/v1/customers/{customerRef}/graduation-offer:
     get:
       operationId: getGraduationOffer
@@ -1031,6 +1006,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      security: &id001
+      - staffOidc: []
   /api/v1/console/data-sources/ranking:
     get:
       operationId: getRanking
@@ -1075,97 +1052,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-    put:
-      operationId: updateRankingWeights
-      tags:
-      - console
-      summary: Edit weights (must sum to 1)
-      x-stories:
-      - US-14
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RankingWeights'
-            example:
-              predictive: 0.3
-              coverage: 0.25
-              cost: 0.15
-              access: 0.15
-              legal: 0.15
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Ranking'
-        default:
-          description: Problem
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-  /api/v1/console/manual-queue:
-    get:
-      operationId: listManualCases
-      tags:
-      - console
-      summary: Manual tier queue
-      x-stories:
-      - US-18
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ManualCase'
-        default:
-          description: Problem
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-  /api/v1/console/manual-queue/{caseId}/resolution:
-    post:
-      operationId: resolveManualCase
-      tags:
-      - console
-      summary: Approve or decline a manual case
-      x-stories:
-      - US-18
-      parameters:
-      - name: caseId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ManualResolution'
-            example:
-              action: APPROVE
-              reasonCode: DOC_CONFIRMED
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ManualCase'
-        default:
-          description: Problem
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
+      security: *id001
   /api/v1/console/learning-loop:
     get:
       operationId: getLearningLoop
@@ -1198,6 +1085,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      security: *id001
   /api/v1/console/consent-ledger:
     get:
       operationId: listConsentLedger
@@ -1221,6 +1109,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      security: *id001
   /api/v1/console/tia:
     get:
       operationId: getTiaStatus
@@ -1245,6 +1134,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      security: *id001
   /api/v1/console/policies:
     get:
       operationId: getPolicy
@@ -1252,7 +1142,7 @@ paths:
       - console
       summary: Guardrail policy (F-06)
       x-stories:
-      - US-19
+      - US-63
       - US-34
       responses:
         '200':
@@ -1272,37 +1162,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-    put:
-      operationId: updatePolicy
-      tags:
-      - console
-      summary: Edit guardrail policy; logged
-      x-stories:
-      - US-19
-      - US-34
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Policy'
-            example:
-              dtiCap: 0.35
-              maxOpenLoans: 3
-              cicRefreshOnLimitChange: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Policy'
-        default:
-          description: Problem
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
+      security: *id001
   /api/v1/console/partners:
     get:
       operationId: listPartners
@@ -1311,6 +1171,7 @@ paths:
       summary: Partners and products
       x-stories:
       - US-33
+      - US-65
       responses:
         '200':
           description: OK
@@ -1328,17 +1189,47 @@ paths:
               - partnerId: grab
                 name: Grab
                 products:
-                - DRIVER_INSTANT_LOAN
+                - PAYMENT_INSTALLMENT
               - partnerId: so-ban-hang
                 name: Sổ Bán Hàng
                 products:
-                - SELLER_FUNDING
+                - PAYMENT_INSTALLMENT
         default:
           description: Problem
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+      security: *id001
+    post:
+      operationId: createPartner
+      tags:
+      - console
+      summary: Create a partner (terms need approval)
+      x-stories:
+      - US-65
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id001
   /api/v1/console/partners/{partnerId}/test-webhook:
     post:
       operationId: sendTestWebhook
@@ -1359,88 +1250,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiCall'
+                $ref: '#/components/schemas/WebhookDelivery'
         default:
           description: Problem
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
-  /api/v1/console/api-calls:
-    get:
-      operationId: listApiCalls
-      tags:
-      - console
-      summary: API inspector timeline
-      x-stories:
-      - US-33
-      parameters:
-      - name: flow
-        in: query
-        required: false
-        schema:
-          type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ApiCall'
-        default:
-          description: Problem
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-  /api/v1/demo/scenario:
-    post:
-      operationId: setDemoScenario
-      tags:
-      - demo
-      summary: Force a scenario (mock mode only)
-      x-stories:
-      - US-02
-      x-mock-only: true
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ScenarioSet'
-            example:
-              scenario: THIN_FILE
-      responses:
-        '200':
-          description: OK
-        default:
-          description: Problem
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-  /api/v1/demo/reset:
-    post:
-      operationId: resetDemoData
-      tags:
-      - demo
-      summary: Reset fixtures (mock mode only)
-      x-stories:
-      - US-02
-      x-mock-only: true
-      security: []
-      responses:
-        '200':
-          description: OK
-        default:
-          description: Problem
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
+      security: *id001
   /api/v1/console/audit-log:
     get:
       operationId: listAuditLog
@@ -1456,12 +1273,2670 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AuditEntry'
+      security: *id001
+      x-stories:
+      - US-61
+  /api/v1/checkout-eligibility:
+    post:
+      operationId: checkCheckoutEligibility
+      tags:
+      - offers
+      summary: Is HLB instalment payment available for this order, and the entry-component content
+      x-stories:
+      - US-03
+      - US-04
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EligibilityCheck'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EligibilityResult'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '503':
+          $ref: '#/components/responses/Problem503'
+      security: &id002
+      - partnerOAuth: []
+        partnerMtls: []
+  /api/v1/content-packs/{version}:
+    get:
+      operationId: getContentPack
+      tags:
+      - consent
+      summary: Consent texts, disclosures, reason-code texts and contract template (vi/en)
+      x-stories:
+      - US-08
+      - US-17
+      - US-37
+      parameters:
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: language
+        in: query
+        schema:
+          $ref: '#/components/schemas/Language'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentPack'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id002
+  /api/v1/offers/{offerRequestId}/cancel:
+    post:
+      operationId: cancelApplication
+      tags:
+      - offers
+      summary: Cancel a pending application (customer cancel or order hold expired)
+      x-stories:
+      - US-03
+      - US-05
+      parameters:
+      - name: offerRequestId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelApplication'
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id002
+  /api/v1/contracts/{contractId}/otp:
+    post:
+      operationId: requestSigningOtp
+      tags:
+      - contract
+      summary: Send the HLB signing OTP to the eKYC-verified phone
+      x-stories:
+      - US-39
+      parameters:
+      - name: contractId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpRequestResult'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '503':
+          $ref: '#/components/responses/Problem503'
+      security: *id002
+  /api/v1/loans/{loanId}/hardship-requests:
+    post:
+      operationId: createHardshipRequest
+      tags:
+      - servicing
+      summary: Customer asks for hardship help
+      x-stories:
+      - US-48
+      parameters:
+      - name: loanId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HardshipRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseRef'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id002
+  /api/v1/hardship-offers/{offerId}:
+    get:
+      operationId: getHardshipOffer
+      tags:
+      - servicing
+      summary: Hardship offer to show the customer
+      x-stories:
+      - US-48
+      parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HardshipOffer'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id002
+  /api/v1/hardship-offers/{offerId}/otp:
+    post:
+      operationId: requestHardshipOtp
+      tags:
+      - servicing
+      summary: Send the OTP to accept a hardship plan
+      x-stories:
+      - US-48
+      parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpRequestResult'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '429':
+          $ref: '#/components/responses/Problem429'
+        '503':
+          $ref: '#/components/responses/Problem503'
+      security: *id002
+  /api/v1/hardship-offers/{offerId}/accept:
+    post:
+      operationId: acceptHardshipOffer
+      tags:
+      - servicing
+      summary: Accept a hardship plan with OTP
+      x-stories:
+      - US-48
+      parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HardshipAcceptance'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Loan'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '410':
+          $ref: '#/components/responses/Problem410'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id002
+  /api/v1/cases:
+    post:
+      operationId: createCase
+      tags:
+      - cases
+      summary: Open a complaint, dispute or data request on behalf of a customer
+      x-stories:
+      - US-54
+      - US-69
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseRef'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id002
+  /api/v1/cases/{caseId}:
+    get:
+      operationId: getCaseStatus
+      tags:
+      - cases
+      summary: Status of a case the partner opened
+      x-stories:
+      - US-54
+      - US-69
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id002
+  /api/v1/servicing/otp-requests:
+    post:
+      operationId: requestServicingOtp
+      tags:
+      - servicing-channel
+      summary: Request a sign-in OTP (same response whatever the match result)
+      x-stories:
+      - US-51
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServicingOtpRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpRequestResult'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '429':
+          $ref: '#/components/responses/Problem429'
+      security: []
+  /api/v1/servicing/sessions:
+    post:
+      operationId: createServicingSession
+      tags:
+      - servicing-channel
+      summary: Verify the OTP and start a short session
+      x-stories:
+      - US-51
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServicingSessionCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServicingSession'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '429':
+          $ref: '#/components/responses/Problem429'
+      security: []
+  /api/v1/servicing/sessions/current:
+    delete:
+      operationId: endServicingSession
+      tags:
+      - servicing-channel
+      summary: Sign out
+      x-stories:
+      - US-51
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: '#/components/responses/Problem401'
+      security: &id003
+      - servicingSession: []
+  /api/v1/servicing/loans:
+    get:
+      operationId: listMyLoans
+      tags:
+      - servicing-channel
+      summary: All my HLB loans across partners
+      x-stories:
+      - US-52
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+      security: *id003
+  /api/v1/servicing/loans/{loanId}:
+    get:
+      operationId: getMyLoan
+      tags:
+      - servicing-channel
+      summary: Schedule, payments, documents and repayment account
+      x-stories:
+      - US-52
+      parameters:
+      - name: loanId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanDetail'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id003
+  /api/v1/servicing/loans/{loanId}/documents/{documentId}:
+    get:
+      operationId: downloadMyDocument
+      tags:
+      - servicing-channel
+      summary: Contract or statement PDF
+      x-stories:
+      - US-52
+      parameters:
+      - name: loanId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                contentMediaType: application/pdf
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id003
+  /api/v1/servicing/loans/{loanId}/settlement-quote:
+    get:
+      operationId: getMySettlementQuote
+      tags:
+      - servicing-channel
+      summary: Early-settlement quote with VietQR details
+      x-stories:
+      - US-53
+      - US-43
+      parameters:
+      - name: loanId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementQuote'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '503':
+          $ref: '#/components/responses/Problem503'
+      security: *id003
+  /api/v1/servicing/requests:
+    post:
+      operationId: createMyRequest
+      tags:
+      - servicing-channel
+      summary: Raise a complaint, dispute, data-rights or hardship request
+      x-stories:
+      - US-54
+      - US-48
+      - US-70
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseRef'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id003
+    get:
+      operationId: listMyRequests
+      tags:
+      - servicing-channel
+      summary: My requests and their status
+      x-stories:
+      - US-54
+      security: *id003
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CasePage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+  /api/v1/servicing/preferences:
+    get:
+      operationId: getMyPreferences
+      tags:
+      - servicing-channel
+      summary: My contact preferences
+      x-stories:
+      - US-55
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preferences'
+        '401':
+          $ref: '#/components/responses/Problem401'
+      security: *id003
+    put:
+      operationId: updateMyPreferences
+      tags:
+      - servicing-channel
+      summary: Update my contact preferences (required notices stay on)
+      x-stories:
+      - US-55
+      security: *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Preferences'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preferences'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '422':
+          $ref: '#/components/responses/Problem422'
+  /api/v1/servicing/consents/{receiptId}/withdraw:
+    post:
+      operationId: withdrawMyConsent
+      tags:
+      - servicing-channel
+      summary: Withdraw a data-sharing consent from the servicing channel
+      x-stories:
+      - US-09
+      parameters:
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentReceipt'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id003
+  /api/v1/console/me:
+    get:
+      operationId: getStaffProfile
+      tags:
+      - console
+      summary: Signed-in staff member, roles and landing screen
+      x-stories:
+      - US-58
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffProfile'
+        '401':
+          $ref: '#/components/responses/Problem401'
+      security: *id001
+  /api/v1/console/overview:
+    get:
+      operationId: getOverview
+      tags:
+      - console
+      summary: Stage metrics, guardrails, STP, latency and source health
+      x-stories:
+      - US-71
+      parameters:
+      - name: period
+        in: query
+        schema: &id004
+          type: string
+      - name: partnerId
+        in: query
+        schema:
+          $ref: '#/components/schemas/PartnerId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Overview'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/alerts:
+    get:
+      operationId: listAlerts
+      tags:
+      - console
+      summary: Open alerts
+      x-stories:
+      - US-71
+      - US-73
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/customers:
+    get:
+      operationId: searchCustomers
+      tags:
+      - console
+      summary: Find customers by phone, CCCD or loan ID (masked)
+      x-stories:
+      - US-62
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema: *id004
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerSummaryPage'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/customers/{customerId}:
+    get:
+      operationId: getCustomer360
+      tags:
+      - console
+      summary: Loans, decisions, consents, cases and notices for one customer
+      x-stories:
+      - US-62
+      parameters:
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer360'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/notices/{noticeId}/resend:
+    post:
+      operationId: resendNotice
+      tags:
+      - console
+      summary: Resend a notice
+      x-stories:
+      - US-62
+      - US-56
+      parameters:
+      - name: noticeId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoticeRecord'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/notices:
+    get:
+      operationId: listNotices
+      tags:
+      - console
+      summary: Notice delivery log
+      x-stories:
+      - US-56
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoticeRecordPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/decisions/{decisionId}/unmask:
+    post:
+      operationId: unmaskDecisionField
+      tags:
+      - console
+      summary: Unmask one field with a reason (role-gated, audited)
+      x-stories:
+      - US-30
+      parameters:
+      - name: decisionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnmaskRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionSummary'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/policy-versions:
+    get:
+      operationId: listPolicyVersions
+      tags:
+      - console
+      summary: Policy versions per product
+      x-stories:
+      - US-63
+      parameters:
+      - name: productType
+        in: query
+        schema:
+          $ref: '#/components/schemas/ProductType'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyVersionPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+    post:
+      operationId: createPolicyDraft
+      tags:
+      - console
+      summary: Create a draft from the active or a given version
+      x-stories:
+      - US-63
+      - US-14
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyDraft'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyVersion'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id001
+  /api/v1/console/policy-versions/{versionId}:
+    get:
+      operationId: getPolicyVersion
+      tags:
+      - console
+      summary: One policy version
+      x-stories:
+      - US-63
+      parameters:
+      - name: versionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyVersion'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+    put:
+      operationId: updatePolicyDraft
+      tags:
+      - console
+      summary: Edit a draft (validation per AC-63.3)
+      x-stories:
+      - US-63
+      - US-14
+      security: *id001
+      parameters:
+      - name: versionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyDraft'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyVersion'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '422':
+          $ref: '#/components/responses/Problem422'
+  /api/v1/console/policy-versions/{versionId}/impact-preview:
+    post:
+      operationId: previewPolicyImpact
+      tags:
+      - console
+      summary: Recompute approval rate, average limit and loss band on the last 30 days
+      x-stories:
+      - US-63
+      parameters:
+      - name: versionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImpactPreview'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/policy-versions/{versionId}/submit:
+    post:
+      operationId: submitPolicyVersion
+      tags:
+      - console
+      summary: Submit a draft for approval
+      x-stories:
+      - US-63
+      - US-60
+      parameters:
+      - name: versionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicySubmit'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id001
+  /api/v1/console/policy-versions/{versionId}/rollback:
+    post:
+      operationId: requestPolicyRollback
+      tags:
+      - console
+      summary: Request reinstating this earlier version (through approval)
+      x-stories:
+      - US-63
+      parameters:
+      - name: versionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicySubmit'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id001
+  /api/v1/console/approvals:
+    get:
+      operationId: listApprovals
+      tags:
+      - console
+      summary: Pending approvals for the signed-in checker
+      x-stories:
+      - US-60
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequestPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/approvals/{approvalId}/approve:
+    post:
+      operationId: approveChange
+      tags:
+      - console
+      summary: Approve (never your own change)
+      x-stories:
+      - US-60
+      parameters:
+      - name: approvalId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalDecision'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id001
+  /api/v1/console/approvals/{approvalId}/reject:
+    post:
+      operationId: rejectChange
+      tags:
+      - console
+      summary: Reject with a comment
+      x-stories:
+      - US-60
+      parameters:
+      - name: approvalId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalDecision'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id001
+  /api/v1/console/staff:
+    get:
+      operationId: listStaff
+      tags:
+      - console
+      summary: Staff and their roles
+      x-stories:
+      - US-59
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUserPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/staff/{staffId}/role-grants:
+    post:
+      operationId: requestRoleGrant
+      tags:
+      - console
+      summary: Grant a role (pending approval)
+      x-stories:
+      - US-59
+      parameters:
+      - name: staffId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleGrantCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/staff/{staffId}/role-grants/{grantId}:
+    delete:
+      operationId: revokeRoleGrant
+      tags:
+      - console
+      summary: Revoke a role
+      x-stories:
+      - US-59
+      parameters:
+      - name: staffId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: grantId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/audit-log/export:
+    post:
+      operationId: exportAuditLog
+      tags:
+      - console
+      summary: Export filtered audit entries (the export is audited)
+      x-stories:
+      - US-61
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportRun'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/collections:
+    get:
+      operationId: listCollectionsCases
+      tags:
+      - console
+      summary: Collections queue by bucket
+      x-stories:
+      - US-47
+      parameters:
+      - name: bucket
+        in: query
+        schema: *id004
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionsCasePage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/collections/{caseId}/contacts:
+    post:
+      operationId: logCollectionContact
+      tags:
+      - console
+      summary: Log a contact (borrower only; hours and frequency enforced)
+      x-stories:
+      - US-47
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactLog'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionsCase'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id001
+  /api/v1/console/collections/{caseId}/hardship-offers:
+    post:
+      operationId: offerHardshipPlan
+      tags:
+      - console
+      summary: Offer a holiday or restructure (second approver above authority)
+      x-stories:
+      - US-48
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HardshipOfferCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HardshipOffer'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id001
+  /api/v1/console/collections/{caseId}/handoff:
+    post:
+      operationId: requestRecoveryHandoff
+      tags:
+      - console
+      summary: Hand the loan to HLB recovery (through approval)
+      x-stories:
+      - US-49
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoffCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id001
+  /api/v1/console/cases:
+    get:
+      operationId: listCases
+      tags:
+      - console
+      summary: Case queue with SLA states
+      x-stories:
+      - US-69
+      parameters:
+      - name: type
+        in: query
+        schema:
+          $ref: '#/components/schemas/CaseType'
+      - name: status
+        in: query
+        schema:
+          $ref: '#/components/schemas/CaseStatus'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CasePage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+    post:
+      operationId: createHotlineCase
+      tags:
+      - console
+      summary: Record a case received by the hotline
+      x-stories:
+      - US-69
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseRef'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/cases/{caseId}:
+    get:
+      operationId: getCase
+      tags:
+      - console
+      summary: Case with links and history
+      x-stories:
+      - US-69
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/cases/{caseId}/assign:
+    post:
+      operationId: assignCase
+      tags:
+      - console
+      summary: Assign to me or another officer
+      x-stories:
+      - US-69
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id001
+  /api/v1/console/cases/{caseId}/resolve:
+    post:
+      operationId: resolveCase
+      tags:
+      - console
+      summary: Resolve and respond through the original channel
+      x-stories:
+      - US-69
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseResolution'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Case'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id001
+  /api/v1/console/cases/{caseId}/data-package:
+    post:
+      operationId: prepareDataPackage
+      tags:
+      - console
+      summary: Assemble the data-access/export package or deletion result
+      x-stories:
+      - US-70
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataPackage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id001
+  /api/v1/console/partners/{partnerId}/status:
+    post:
+      operationId: changePartnerStatus
+      tags:
+      - console
+      summary: Pause, resume, go live or exit (kill switch; approval except emergency pause)
+      x-stories:
+      - US-65
+      - US-68
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerStatusChange'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id001
+  /api/v1/console/partners/{partnerId}/credentials:
+    post:
+      operationId: issuePartnerCredential
+      tags:
+      - console
+      summary: Issue or rotate credentials (secret shown once)
+      x-stories:
+      - US-65
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CredentialIssue'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialSecret'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id001
+  /api/v1/console/partners/{partnerId}/certification:
+    get:
+      operationId: getCertification
+      tags:
+      - console
+      summary: Certification checklist and results
+      x-stories:
+      - US-37
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: productType
+        in: query
+        schema:
+          $ref: '#/components/schemas/ProductType'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationReport'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/partners/{partnerId}/certification/run:
+    post:
+      operationId: runApiCertification
+      tags:
+      - console
+      summary: Run the automated API checks against the partner sandbox
+      x-stories:
+      - US-37
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationReport'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id001
+  /api/v1/console/partners/{partnerId}/certification/items/{itemId}:
+    put:
+      operationId: updateCertificationItem
+      tags:
+      - console
+      summary: Record a screen-check result
+      x-stories:
+      - US-37
+      security: *id001
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CertificationUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationItem'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+  /api/v1/console/partners/{partnerId}/api-calls:
+    get:
+      operationId: listPartnerApiCalls
+      tags:
+      - console
+      summary: Per-partner API call log (sandbox and production)
+      x-stories:
+      - US-36
+      - US-37
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApiCallPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/partners/{partnerId}/webhook-deliveries:
+    get:
+      operationId: listWebhookDeliveries
+      tags:
+      - console
+      summary: Outgoing webhook deliveries and retries
+      x-stories:
+      - US-33
+      - US-41
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/reconciliation/runs:
+    get:
+      operationId: listReconciliationRuns
+      tags:
+      - console
+      summary: Daily runs per partner
+      x-stories:
+      - US-66
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconciliationRunPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/reconciliation/runs/{runId}/items:
+    get:
+      operationId: listReconciliationItems
+      tags:
+      - console
+      summary: Items and exceptions of a run
+      x-stories:
+      - US-66
+      parameters:
+      - name: runId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconciliationItemPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/reconciliation/items/{itemId}/resolve:
+    post:
+      operationId: resolveReconciliationItem
+      tags:
+      - console
+      summary: Adjust (through approval) or mark as timing
+      x-stories:
+      - US-66
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconciliationResolution'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconciliationItem'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id001
+  /api/v1/console/invoices:
+    get:
+      operationId: listInvoices
+      tags:
+      - console
+      summary: MDR invoices and revenue-share statements
+      x-stories:
+      - US-67
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoicePage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/invoices/generate:
+    post:
+      operationId: generateInvoices
+      tags:
+      - console
+      summary: Generate month-end invoices and statements for approval
+      x-stories:
+      - US-67
+      - US-76
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceGenerate'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportRun'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id001
+  /api/v1/console/reports:
+    get:
+      operationId: listReports
+      tags:
+      - console
+      summary: Report catalogue
+      x-stories:
+      - US-72
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDefinitionPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/reports/runs:
+    post:
+      operationId: runReport
+      tags:
+      - console
+      summary: Generate or schedule a report
+      x-stories:
+      - US-72
+      - US-75
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRunCreate'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportRun'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/reports/runs/{runId}:
+    get:
+      operationId: getReportRun
+      tags:
+      - console
+      summary: Report status and download link (role-gated, audited)
+      x-stories:
+      - US-72
+      parameters:
+      - name: runId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportRun'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/regulatory-feeds:
+    get:
+      operationId: listRegulatoryFeeds
+      tags:
+      - console
+      summary: CIC and regulatory feed status (via core banking)
+      x-stories:
+      - US-72
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegulatoryFeedPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/data-sources:
+    get:
+      operationId: listDataSourceHealth
+      tags:
+      - console
+      summary: Source status, latency, errors, cost, consent coverage
+      x-stories:
+      - US-73
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSourceHealthPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/data-sources/{sourceId}/toggle:
+    post:
+      operationId: toggleDataSource
+      tags:
+      - console
+      summary: Emergency disable/enable (post-hoc approval)
+      x-stories:
+      - US-73
+      - US-15
+      parameters:
+      - name: sourceId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SourceToggle'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSourceHealth'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/fairness:
+    get:
+      operationId: getFairnessReport
+      tags:
+      - console
+      summary: Approval and pricing ratios by group and source
+      x-stories:
+      - US-75
+      parameters:
+      - name: period
+        in: query
+        schema: *id004
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FairnessReport'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+  /api/v1/console/models:
+    get:
+      operationId: listModels
+      tags:
+      - console
+      summary: Model registry
+      x-stories:
+      - US-64
+      - US-31
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelVersionPage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+    post:
+      operationId: registerModel
+      tags:
+      - console
+      summary: Register a model trained offline (ONNX)
+      x-stories:
+      - US-64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelRegister'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelVersion'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id001
+  /api/v1/console/models/{modelVersionId}/validation:
+    post:
+      operationId: attachModelValidation
+      tags:
+      - console
+      summary: Attach the independent validation report
+      x-stories:
+      - US-64
+      parameters:
+      - name: modelVersionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelValidation'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelVersion'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id001
+  /api/v1/console/models/{modelVersionId}/mode:
+    post:
+      operationId: requestModelModeChange
+      tags:
+      - console
+      summary: Shadow / challenger / champion / retire (through approval)
+      x-stories:
+      - US-64
+      parameters:
+      - name: modelVersionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelModeChange'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id001
+  /api/v1/console/notice-templates:
+    get:
+      operationId: listNoticeTemplates
+      tags:
+      - console
+      summary: Notice templates (vi/en, versioned)
+      x-stories:
+      - US-57
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NoticeTemplatePage'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: *id001
+    post:
+      operationId: createNoticeTemplateDraft
+      tags:
+      - console
+      summary: Draft a template change (approval required)
+      x-stories:
+      - US-57
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoticeTemplateDraft'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalRequest'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id001
+  /api/v1/decisions/{decisionId}/appeals:
+    post:
+      operationId: createAppeal
+      tags:
+      - decision
+      summary: Customer asks for a human reassessment of a counter-offer or decline (D-78)
+      x-stories:
+      - US-78
+      parameters:
+      - name: decisionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppealRequest'
+            example:
+              note: Tôi có thu nhập lương ổn định, mong HLB xem xét lại.
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppealSummary'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: &id005
+      - partnerOAuth: []
+        partnerMtls: []
+  /api/v1/appeals/{appealId}:
+    get:
+      operationId: getAppeal
+      tags:
+      - decision
+      summary: Appeal status for the partner app
+      x-stories:
+      - US-78
+      parameters:
+      - name: appealId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppealSummary'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+      security: *id005
+  /api/v1/servicing/decisions/{decisionId}/appeals:
+    post:
+      operationId: createMyAppeal
+      tags:
+      - servicing-channel
+      summary: Request a reassessment from the servicing channel
+      x-stories:
+      - US-78
+      parameters:
+      - name: decisionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppealRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppealSummary'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: &id006
+      - servicingSession: []
+  /api/v1/servicing/appeals:
+    get:
+      operationId: listMyAppeals
+      tags:
+      - servicing-channel
+      summary: My appeals and their status
+      x-stories:
+      - US-78
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AppealSummary'
+        '401':
+          $ref: '#/components/responses/Problem401'
+      security: *id006
+  /api/v1/console/appeals:
+    get:
+      operationId: listAppeals
+      tags:
+      - console
+      summary: Appeals queue (customer-requested reassessments)
+      x-stories:
+      - US-18
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Appeal'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+      security: &id007
+      - staffOidc: []
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/AppealStatus'
+  /api/v1/console/appeals/{appealId}/decision:
+    post:
+      operationId: decideAppeal
+      tags:
+      - console
+      summary: 'Uphold or overturn the AI decision (above authority: pending a checker)'
+      x-stories:
+      - US-18
+      - US-60
+      parameters:
+      - name: appealId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppealResolution'
+            example:
+              outcome: OVERTURNED
+              reasonCode: INCOME_VERIFIED
+              newOfferAmount:
+                amount: 12000000
+                currency: VND
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appeal'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id007
+  /api/v1/console/appeals/{appealId}/information-request:
+    post:
+      operationId: requestAppealInformation
+      tags:
+      - console
+      summary: Ask the customer for more information (pauses the clock)
+      x-stories:
+      - US-18
+      parameters:
+      - name: appealId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppealInfoRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appeal'
+        '400':
+          $ref: '#/components/responses/Problem400'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+      security: *id007
+  /api/v1/console/cases/{caseId}/appeal:
+    post:
+      operationId: openAppealFromCase
+      tags:
+      - console
+      summary: Open a decision dispute as an appeal
+      x-stories:
+      - US-69
+      - US-78
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appeal'
+        '401':
+          $ref: '#/components/responses/Problem401'
+        '403':
+          $ref: '#/components/responses/Problem403'
+        '404':
+          $ref: '#/components/responses/Problem404'
+        '409':
+          $ref: '#/components/responses/Problem409'
+        '422':
+          $ref: '#/components/responses/Problem422'
+      security: *id007
 components:
   securitySchemes:
-    bearerAuth:
+    partnerOAuth:
+      type: oauth2
+      description: Partner client credentials; tokens are short-lived and scoped to products (AC-35.1)
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.creditpulse.hlb.example/oauth2/token
+          scopes:
+            lending: Applications, decisions, contracts
+            servicing: Loans, repayments, hardship
+            events: Inbound partner events
+    partnerMtls:
+      type: mutualTLS
+      description: Client certificate registered per partner credential (US-65)
+    staffOidc:
+      type: openIdConnect
+      openIdConnectUrl: https://sso.hlb.example/.well-known/openid-configuration
+      description: HLB staff SSO (D-69); roles from role grants (US-59)
+    servicingSession:
       type: http
       scheme: bearer
-      bearerFormat: JWT
+      description: Short-lived borrower session after OTP sign-in (US-51)
   schemas:
     Problem:
       type: object
@@ -1510,8 +3985,6 @@ components:
       type: string
       enum:
       - PAYMENT_INSTALLMENT
-      - DRIVER_INSTANT_LOAN
-      - SELLER_FUNDING
       description: 'D-37: one API, three product types'
     Segment:
       type: string
@@ -1553,13 +4026,9 @@ components:
       type: string
       enum:
       - APPROVED
+      - COUNTER_OFFER
       - DECLINED
-      - MANUAL_REVIEW
-    DecisionTier:
-      type: string
-      enum:
-      - STP
-      - MANUAL
+      description: The engine always decides (D-77); there is no pending or referred outcome
     ConsentStatus:
       type: string
       enum:
@@ -1583,17 +4052,6 @@ components:
       - PAUSED
       - LATE
       - SETTLED
-    ScenarioName:
-      type: string
-      enum:
-      - APPROVE
-      - THIN_FILE
-      - NOT_APPROVED
-      - MANUAL_REVIEW
-      - SLOW
-      - EKYC_FAIL
-      - SOURCE_DOWN
-      - SESSION_EXPIRED
     SourceUse:
       type: object
       properties:
@@ -1964,8 +4422,6 @@ components:
           format: uuid
         outcome:
           $ref: '#/components/schemas/DecisionOutcome'
-        tier:
-          $ref: '#/components/schemas/DecisionTier'
         approvedAmount:
           $ref: '#/components/schemas/Money'
         tenorMonths:
@@ -1996,10 +4452,21 @@ components:
         decidedAt:
           type: string
           format: date-time
+        appealStatus:
+          $ref: '#/components/schemas/AppealStatus'
+        requestedAmount:
+          $ref: '#/components/schemas/Money'
+        appealable:
+          type: boolean
+          description: True for COUNTER_OFFER and DECLINED within 30 days and without an appeal (D-78)
+        appealDeadline:
+          type: string
+          format: date-time
+        appeal:
+          $ref: '#/components/schemas/AppealSummary'
       required:
       - decisionId
       - outcome
-      - tier
       - reasonCodes
       - explanationText
       - dataUsed
@@ -2183,52 +4650,6 @@ components:
       - loanId
       - newPrincipal
       - pauseUntil
-    PayoutEvent:
-      type: object
-      properties:
-        loanId:
-          type: string
-          format: uuid
-        cycleId:
-          type: string
-        incomeAmount:
-          $ref: '#/components/schemas/Money'
-      required:
-      - loanId
-      - cycleId
-      - incomeAmount
-    DeductionResult:
-      type: object
-      properties:
-        loanId:
-          type: string
-          format: uuid
-        cycleId:
-          type: string
-        deducted:
-          $ref: '#/components/schemas/Money'
-        reason:
-          type: string
-        remaining:
-          $ref: '#/components/schemas/Money'
-      required:
-      - loanId
-      - cycleId
-      - deducted
-    SettlementEvent:
-      type: object
-      properties:
-        loanId:
-          type: string
-          format: uuid
-        settlementId:
-          type: string
-        grossAmount:
-          $ref: '#/components/schemas/Money'
-      required:
-      - loanId
-      - settlementId
-      - grossAmount
     GraduationOffer:
       type: object
       properties:
@@ -2261,13 +4682,13 @@ components:
           $ref: '#/components/schemas/Money'
         outcome:
           $ref: '#/components/schemas/DecisionOutcome'
-        tier:
-          $ref: '#/components/schemas/DecisionTier'
         latencyMs:
           type: integer
         decidedAt:
           type: string
           format: date-time
+        appealStatus:
+          $ref: '#/components/schemas/AppealStatus'
       required:
       - decisionId
       - customerMask
@@ -2275,7 +4696,6 @@ components:
       - productType
       - amount
       - outcome
-      - tier
       - latencyMs
       - decidedAt
     DecisionPage:
@@ -2376,44 +4796,6 @@ components:
       - sources
       - waterfallOrder
       - segmentRungMatrix
-    ManualCase:
-      type: object
-      properties:
-        caseId:
-          type: string
-          format: uuid
-        decisionId:
-          type: string
-          format: uuid
-        slaDueAt:
-          type: string
-          format: date-time
-        status:
-          type: string
-          enum:
-          - OPEN
-          - RESOLVED
-        suggestedAction:
-          type: string
-      required:
-      - caseId
-      - decisionId
-      - slaDueAt
-      - status
-      - suggestedAction
-    ManualResolution:
-      type: object
-      properties:
-        action:
-          type: string
-          enum:
-          - APPROVE
-          - DECLINE
-        reasonCode:
-          type: string
-      required:
-      - action
-      - reasonCode
     LearningLoop:
       type: object
       properties:
@@ -2537,54 +4919,6 @@ components:
       - webhookUrl
       - settlementAccountMask
       - sandboxKeyMask
-    ApiCall:
-      type: object
-      properties:
-        callId:
-          type: string
-          format: uuid
-        flow:
-          type: string
-        method:
-          type: string
-        path:
-          type: string
-        status:
-          type: integer
-        latencyMs:
-          type: integer
-        idempotencyKey:
-          type: string
-        request:
-          type: object
-          additionalProperties: true
-        response:
-          type: object
-          additionalProperties: true
-        screen:
-          type: string
-        at:
-          type: string
-          format: date-time
-      required:
-      - callId
-      - flow
-      - method
-      - path
-      - status
-      - latencyMs
-      - idempotencyKey
-      - request
-      - response
-      - screen
-      - at
-    ScenarioSet:
-      type: object
-      properties:
-        scenario:
-          $ref: '#/components/schemas/ScenarioName'
-      required:
-      - scenario
     AuditEntry:
       type: object
       required:
@@ -2598,9 +4932,1766 @@ components:
           format: date-time
         action:
           type: string
-          description: e.g. ranking.weights, policy.update, manual.resolve, learning.promote
+          description: e.g. ranking.weights, policy.update, appeal.decide, learning.promote
         actor:
           type: string
           description: Operator who made the change
         detail:
           type: string
+    Role:
+      type: string
+      enum:
+      - OPERATOR
+      - REVIEWER
+      - POLICY_MAKER
+      - CHECKER
+      - COLLECTIONS
+      - CASE_OFFICER
+      - FINANCE_OPS
+      - PARTNERSHIP
+      - INTEGRATION
+      - MODEL_DEVELOPER
+      - VALIDATOR
+      - RISK_HEAD
+      - COMPLIANCE
+      - HOTLINE
+      - ADMIN
+      - AUDITOR
+    CaseType:
+      type: string
+      enum:
+      - COMPLAINT
+      - DISPUTE
+      - DATA_ACCESS
+      - DATA_EXPORT
+      - DATA_CORRECTION
+      - DATA_DELETION
+      - CONSENT_WITHDRAWAL
+      - HARDSHIP
+    CaseStatus:
+      type: string
+      enum:
+      - OPEN
+      - ASSIGNED
+      - WAITING_CUSTOMER
+      - RESOLVED
+      - CLOSED
+    PartnerStatus:
+      type: string
+      enum:
+      - draft
+      - sandbox
+      - certified
+      - live
+      - paused
+      - exiting
+      - exited
+    ApprovalKind:
+      type: string
+      enum:
+      - POLICY_VERSION
+      - PARTNER_TERMS
+      - PARTNER_STATUS
+      - CREDENTIAL
+      - ROLE_GRANT
+      - RECON_ADJUSTMENT
+      - INVOICE
+      - MODEL_MODE
+      - NOTICE_TEMPLATE
+      - HARDSHIP_OFFER
+      - APPEAL_OVERTURN
+      - SOURCE_TOGGLE
+      - HANDOFF
+    Language:
+      type: string
+      enum:
+      - vi
+      - en
+    EligibilityCheck:
+      type: object
+      properties:
+        partnerId:
+          $ref: '#/components/schemas/PartnerId'
+        productType:
+          $ref: '#/components/schemas/ProductType'
+        orderAmount: &id009
+          $ref: '#/components/schemas/Money'
+        customerRef: *id004
+      required:
+      - partnerId
+      - productType
+      - orderAmount
+    EligibilityResult:
+      type: object
+      properties:
+        eligible: &id012
+          type: boolean
+        entryComponent:
+          type: object
+          description: Content-pack strings for the HLB entry component (vi/en)
+          additionalProperties: true
+        teaser:
+          description: Only with a valid pre-screen (DD-09)
+          oneOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        reason: *id004
+      required:
+      - eligible
+      examples:
+      - eligible: true
+        entryComponent:
+          vi: Trả góp qua HLB
+        teaser: null
+    ContentPack:
+      type: object
+      properties:
+        version: *id004
+        language:
+          $ref: '#/components/schemas/Language'
+        consentTexts:
+          type: object
+          additionalProperties: true
+        disclosures:
+          type: object
+          additionalProperties: true
+        reasonCodeTexts:
+          type: object
+          additionalProperties: true
+        contractTemplate: *id004
+      required:
+      - version
+      - language
+    CancelApplication:
+      type: object
+      properties:
+        reason:
+          type: string
+          enum:
+          - CUSTOMER_CANCELLED
+          - ORDER_EXPIRED
+          - PARTNER_TIMEOUT
+      required:
+      - reason
+    OtpRequestResult:
+      type: object
+      properties:
+        challengeId: &id008
+          type: string
+          format: uuid
+        expiresAt: &id010
+          type: string
+          format: date-time
+        maskedPhone: *id004
+      required:
+      - challengeId
+      - expiresAt
+    HardshipRequest:
+      type: object
+      properties:
+        reason: *id004
+        incomeEvidenceOptions:
+          type: array
+          items: *id004
+        channel:
+          type: string
+          enum:
+          - PARTNER
+          - SERVICING_CHANNEL
+          - HOTLINE
+      required:
+      - reason
+      - channel
+    HardshipOffer:
+      type: object
+      properties:
+        offerId: *id008
+        loanId: *id008
+        kind:
+          type: string
+          enum:
+          - PAYMENT_HOLIDAY
+          - RESTRUCTURE
+        newSchedule:
+          type: array
+          items:
+            $ref: '#/components/schemas/Instalment'
+        totalCostChange: *id009
+        expiresAt: *id010
+        status: *id004
+      required:
+      - offerId
+      - loanId
+      - kind
+      - totalCostChange
+    HardshipAcceptance:
+      type: object
+      properties:
+        otpChallengeId: *id008
+        otpCode: *id004
+      required:
+      - otpChallengeId
+      - otpCode
+    CaseCreate:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/CaseType'
+        loanId: *id008
+        decisionId: *id008
+        description: *id004
+        channel:
+          type: string
+          enum:
+          - PARTNER
+          - SERVICING_CHANNEL
+          - HOTLINE
+        customerRef: *id004
+      required:
+      - type
+      - description
+      - channel
+    CaseRef:
+      type: object
+      properties:
+        caseId: *id008
+        referenceNo: *id004
+        respondBy: *id010
+      required:
+      - caseId
+      - referenceNo
+      - respondBy
+      examples:
+      - caseId: 0b8c…
+        referenceNo: HLB-YC-2026-000123
+        respondBy: '2026-10-19T17:00:00+07:00'
+    Case:
+      type: object
+      properties:
+        caseId: *id008
+        referenceNo: *id004
+        type:
+          $ref: '#/components/schemas/CaseType'
+        channel: *id004
+        status:
+          $ref: '#/components/schemas/CaseStatus'
+        slaDueAt: *id010
+        slaState:
+          type: string
+          enum:
+          - GREEN
+          - AMBER
+          - RED
+        loanId: *id008
+        decisionId: *id008
+        assigneeId: *id008
+        events:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        outcomeCode: *id004
+      required:
+      - caseId
+      - referenceNo
+      - type
+      - status
+      - slaDueAt
+    CaseResolution:
+      type: object
+      properties:
+        outcomeCode: *id004
+        response: *id004
+      required:
+      - outcomeCode
+      - response
+    DataPackage:
+      type: object
+      properties:
+        packageId: *id008
+        contents:
+          type: array
+          items: *id004
+        retainedItems:
+          type: array
+          items:
+            type: object
+            properties:
+              category: *id004
+              legalBasis: *id004
+              until: &id013
+                type: string
+                format: date
+        downloadUrl: *id004
+      required:
+      - packageId
+    PartnerEvent:
+      type: object
+      properties:
+        eventId: *id004
+        type: *id004
+        sequence: &id011
+          type: integer
+        occurredAt: *id010
+        data:
+          type: object
+          additionalProperties: true
+      required:
+      - eventId
+      - type
+      - sequence
+      - occurredAt
+      - data
+      description: Outgoing webhook envelope; partners ignore events with a sequence lower than the last applied (AC-45.2)
+    ServicingOtpRequest:
+      type: object
+      properties:
+        phone: *id004
+        nationalIdLast6:
+          type: string
+          pattern: ^[0-9]{6}$
+        language:
+          $ref: '#/components/schemas/Language'
+      required:
+      - phone
+      - nationalIdLast6
+    ServicingSessionCreate:
+      type: object
+      properties:
+        challengeId: *id008
+        otpCode: *id004
+      required:
+      - challengeId
+      - otpCode
+    ServicingSession:
+      type: object
+      properties:
+        accessToken: *id004
+        expiresAt: *id010
+      required:
+      - accessToken
+      - expiresAt
+    LoanDetail:
+      type: object
+      properties:
+        loan:
+          $ref: '#/components/schemas/Loan'
+        schedule:
+          type: array
+          items:
+            $ref: '#/components/schemas/Instalment'
+        payments:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        documents:
+          type: array
+          items:
+            type: object
+            properties:
+              documentId: *id004
+              kind: *id004
+              issuedAt: *id010
+        partnerId:
+          $ref: '#/components/schemas/PartnerId'
+        repaymentAccount:
+          type: object
+          properties:
+            accountNo: *id004
+            vietQrPayload: *id004
+      required:
+      - loan
+      - schedule
+    Preferences:
+      type: object
+      properties:
+        email: *id004
+        language:
+          $ref: '#/components/schemas/Language'
+        optionalChannels:
+          type: array
+          items: *id004
+        requiredNotices:
+          type: array
+          items: *id004
+      required:
+      - language
+    StaffProfile:
+      type: object
+      properties:
+        staffId: *id008
+        displayName: *id004
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+        landing: *id004
+      required:
+      - staffId
+      - roles
+    Overview:
+      type: object
+      properties:
+        period: *id004
+        stageMetrics:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        guardrails:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        stpRate:
+          type: number
+        latencyP95Ms: *id011
+        sourceHealth:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        alerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alert'
+      required:
+      - period
+    Alert:
+      type: object
+      properties:
+        alertId: *id008
+        metricCode: *id004
+        severity:
+          type: string
+          enum:
+          - AMBER
+          - RED
+        scope:
+          type: object
+          additionalProperties: true
+        openedAt: *id010
+      required:
+      - alertId
+      - metricCode
+      - severity
+    CustomerSummary:
+      type: object
+      properties:
+        customerId: *id008
+        maskedName: *id004
+        maskedPhone: *id004
+        loans: *id011
+        openCases: *id011
+      required:
+      - customerId
+    Customer360:
+      type: object
+      properties:
+        customerId: *id008
+        maskedName: *id004
+        loans:
+          type: array
+          items:
+            $ref: '#/components/schemas/Loan'
+        decisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DecisionSummary'
+        consents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsentReceipt'
+        cases:
+          type: array
+          items:
+            $ref: '#/components/schemas/Case'
+        notices:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      required:
+      - customerId
+    UnmaskRequest:
+      type: object
+      properties:
+        field: *id004
+        reason: *id004
+      required:
+      - field
+      - reason
+    PolicyVersion:
+      type: object
+      properties:
+        policyVersionId: *id008
+        productType:
+          $ref: '#/components/schemas/ProductType'
+        versionNo: *id011
+        status: *id004
+        config:
+          type: object
+          additionalProperties: true
+        impactPreview:
+          type: object
+          additionalProperties: true
+        effectiveFrom: *id010
+        createdBy: *id008
+        approvedBy: *id008
+      required:
+      - policyVersionId
+      - productType
+      - versionNo
+      - status
+      - config
+    PolicyDraft:
+      type: object
+      properties:
+        productType:
+          $ref: '#/components/schemas/ProductType'
+        basedOn: *id008
+        config:
+          type: object
+          additionalProperties: true
+        reason: *id004
+      required:
+      - productType
+      - config
+    PolicySubmit:
+      type: object
+      properties:
+        reason: *id004
+        effectiveFrom: *id010
+      required:
+      - reason
+    ImpactPreview:
+      type: object
+      properties:
+        window: *id004
+        approvalRate:
+          type: number
+        averageLimit: *id009
+        expectedLossBand: *id004
+      required:
+      - window
+    ApprovalRequest:
+      type: object
+      properties:
+        approvalId: *id008
+        kind:
+          $ref: '#/components/schemas/ApprovalKind'
+        targetId: *id004
+        diff:
+          type: object
+          additionalProperties: true
+        reason: *id004
+        makerId: *id008
+        status: *id004
+        expiresAt: *id010
+      required:
+      - approvalId
+      - kind
+      - status
+    ApprovalDecision:
+      type: object
+      properties:
+        comment: *id004
+    StaffUser:
+      type: object
+      properties:
+        staffId: *id008
+        displayName: *id004
+        active: *id012
+        roles:
+          type: array
+          items:
+            type: object
+            properties:
+              grantId: *id008
+              role:
+                $ref: '#/components/schemas/Role'
+              status: *id004
+              authorityLimit: *id009
+      required:
+      - staffId
+    RoleGrantCreate:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/Role'
+        authorityLimit: *id009
+        reason: *id004
+      required:
+      - role
+      - reason
+    CollectionsCase:
+      type: object
+      properties:
+        collectionsCaseId: *id008
+        loanId: *id008
+        dpd: *id011
+        bucket: *id004
+        status: *id004
+        nextContactWindow:
+          type: object
+          properties:
+            from: *id010
+            to: *id010
+        contacts:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      required:
+      - collectionsCaseId
+      - loanId
+      - dpd
+    ContactLog:
+      type: object
+      properties:
+        channel:
+          type: string
+          enum:
+          - SMS
+          - CALL
+          - EMAIL
+          - PARTNER_PUSH
+        outcome: *id004
+        promiseToPayDate: *id013
+      required:
+      - channel
+      - outcome
+      description: Only the borrower can be contacted; contacts outside allowed hours or above the daily limit are rejected with 422 contact-rule (AC-47.3)
+    HardshipOfferCreate:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+          - PAYMENT_HOLIDAY
+          - RESTRUCTURE
+        terms:
+          type: object
+          additionalProperties: true
+        reason: *id004
+      required:
+      - kind
+      - terms
+    HandoffCreate:
+      type: object
+      properties:
+        reason: *id004
+      required:
+      - reason
+    PartnerCreate:
+      type: object
+      properties:
+        partnerId: *id004
+        legalName: *id004
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductType'
+        revenueShareBps: *id011
+        mdrBps: *id011
+        exposureLimit: *id009
+      required:
+      - partnerId
+      - legalName
+      - products
+    PartnerStatusChange:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/PartnerStatus'
+        effectiveAt: *id010
+        reason: *id004
+        scope:
+          type: string
+          enum:
+          - PARTNER
+          - PRODUCT
+        productType:
+          $ref: '#/components/schemas/ProductType'
+      required:
+      - status
+      - reason
+    CredentialIssue:
+      type: object
+      properties:
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        mtlsCertificatePem: *id004
+      required:
+      - environment
+      - mtlsCertificatePem
+    CredentialSecret:
+      type: object
+      properties:
+        credentialId: *id008
+        clientId: *id004
+        clientSecret:
+          type: string
+          description: Shown once (AC-65.2)
+        oldCredentialValidUntil: *id010
+      required:
+      - credentialId
+      - clientId
+      - clientSecret
+    CertificationItem:
+      type: object
+      properties:
+        itemId: *id008
+        ref: *id004
+        kind:
+          type: string
+          enum:
+          - api
+          - screen
+        result:
+          type: string
+          enum:
+          - pending
+          - pass
+          - fail
+        evidenceUrl: *id004
+        comment: *id004
+      required:
+      - itemId
+      - ref
+      - kind
+      - result
+    CertificationReport:
+      type: object
+      properties:
+        partnerId:
+          $ref: '#/components/schemas/PartnerId'
+        productType:
+          $ref: '#/components/schemas/ProductType'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CertificationItem'
+        passed: *id012
+      required:
+      - partnerId
+      - items
+      - passed
+    CertificationUpdate:
+      type: object
+      properties:
+        result:
+          type: string
+          enum:
+          - pass
+          - fail
+        evidenceUrl: *id004
+        comment: *id004
+      required:
+      - result
+    PartnerApiCall:
+      type: object
+      properties:
+        callId: *id008
+        method: *id004
+        path: *id004
+        status: *id011
+        latencyMs: *id011
+        idempotencyKey: *id004
+        at: *id010
+      required:
+      - callId
+      - method
+      - path
+      - status
+    WebhookDelivery:
+      type: object
+      properties:
+        deliveryId: *id008
+        eventType: *id004
+        status: *id004
+        attempts: *id011
+        lastStatusCode: *id011
+        createdAt: *id010
+      required:
+      - deliveryId
+      - eventType
+      - status
+    ReconciliationRun:
+      type: object
+      properties:
+        runId: *id008
+        partnerId:
+          $ref: '#/components/schemas/PartnerId'
+        businessDate: *id013
+        status: *id004
+        matchedCount: *id011
+        exceptionCount: *id011
+      required:
+      - runId
+      - partnerId
+      - businessDate
+      - status
+    ReconciliationItem:
+      type: object
+      properties:
+        itemId: *id008
+        kind: *id004
+        amount: *id009
+        status: *id004
+        cause: *id004
+        refs:
+          type: object
+          additionalProperties: true
+      required:
+      - itemId
+      - kind
+      - amount
+      - status
+    ReconciliationResolution:
+      type: object
+      properties:
+        resolution:
+          type: string
+          enum:
+          - ADJUSTMENT
+          - TIMING
+        adjustment: *id009
+        reason: *id004
+      required:
+      - resolution
+      - reason
+    Invoice:
+      type: object
+      properties:
+        invoiceId: *id008
+        partnerId:
+          $ref: '#/components/schemas/PartnerId'
+        kind: *id004
+        period: *id004
+        total: *id009
+        status: *id004
+        lines:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      required:
+      - invoiceId
+      - partnerId
+      - kind
+      - total
+      - status
+    InvoiceGenerate:
+      type: object
+      properties:
+        period:
+          type: string
+          pattern: ^[0-9]{4}-[0-9]{2}$
+      required:
+      - period
+    ReportDefinition:
+      type: object
+      properties:
+        code: *id004
+        name: *id004
+        containsPii: *id012
+      required:
+      - code
+      - name
+    ReportRunCreate:
+      type: object
+      properties:
+        code: *id004
+        parameters:
+          type: object
+          additionalProperties: true
+        schedule: *id004
+      required:
+      - code
+    ReportRun:
+      type: object
+      properties:
+        runId: *id008
+        code: *id004
+        status: *id004
+        downloadUrl: *id004
+      required:
+      - runId
+      - code
+      - status
+    RegulatoryFeed:
+      type: object
+      properties:
+        feed: *id004
+        lastRunAt: *id010
+        status: *id004
+        nextRunAt: *id010
+      required:
+      - feed
+      - status
+    DataSourceHealth:
+      type: object
+      properties:
+        sourceId:
+          $ref: '#/components/schemas/SourceId'
+        status: *id004
+        latencyP95Ms: *id011
+        errorRate:
+          type: number
+        costPerCall: *id009
+        consentCoverage:
+          type: number
+        lastIngestionAt: *id010
+        emergencyDisabled: *id012
+      required:
+      - sourceId
+      - status
+    SourceToggle:
+      type: object
+      properties:
+        disable: *id012
+        reason: *id004
+      required:
+      - disable
+      - reason
+    FairnessReport:
+      type: object
+      properties:
+        period: *id004
+        groups:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        breaches:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      required:
+      - period
+    ModelVersion:
+      type: object
+      properties:
+        modelVersionId: *id008
+        name: *id004
+        versionLabel: *id004
+        artefactSha256: *id004
+        mode: *id004
+        trafficShareBps: *id011
+        performance:
+          type: object
+          additionalProperties: true
+        fairness:
+          type: object
+          additionalProperties: true
+        documentationUri: *id004
+        validationReportUri: *id004
+      required:
+      - modelVersionId
+      - name
+      - versionLabel
+      - mode
+    ModelRegister:
+      type: object
+      properties:
+        name: *id004
+        versionLabel: *id004
+        artefactUri: *id004
+        artefactSha256: *id004
+        dataWindow: *id004
+        features:
+          type: array
+          items: *id004
+        performance:
+          type: object
+          additionalProperties: true
+        fairness:
+          type: object
+          additionalProperties: true
+        documentationUri: *id004
+      required:
+      - name
+      - versionLabel
+      - artefactUri
+      - artefactSha256
+      - documentationUri
+    ModelValidation:
+      type: object
+      properties:
+        validationReportUri: *id004
+        conclusion: *id004
+      required:
+      - validationReportUri
+      - conclusion
+    ModelModeChange:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+          - shadow
+          - challenger
+          - champion
+          - retired
+        trafficShareBps: *id011
+        reason: *id004
+      required:
+      - mode
+      - reason
+    NoticeTemplate:
+      type: object
+      properties:
+        templateId: *id004
+        versionNo: *id011
+        language:
+          $ref: '#/components/schemas/Language'
+        channel: *id004
+        body: *id004
+        requiredVariables:
+          type: array
+          items: *id004
+        legallyRequired: *id012
+        status: *id004
+      required:
+      - templateId
+      - versionNo
+      - language
+      - channel
+      - body
+    NoticeTemplateDraft:
+      type: object
+      properties:
+        templateId: *id004
+        language:
+          $ref: '#/components/schemas/Language'
+        channel: *id004
+        body: *id004
+        reason: *id004
+      required:
+      - templateId
+      - language
+      - channel
+      - body
+    NoticeRecord:
+      type: object
+      properties:
+        noticeId: *id008
+        templateId: *id004
+        channel: *id004
+        status: *id004
+        createdAt: *id010
+        deliveredAt: *id010
+      required:
+      - noticeId
+      - templateId
+      - status
+    LoanPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Loan'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    CasePage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Case'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    AlertPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alert'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    CustomerSummaryPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerSummary'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    NoticeRecordPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NoticeRecord'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    PolicyVersionPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PolicyVersion'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    ApprovalRequestPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApprovalRequest'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    StaffUserPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffUser'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    CollectionsCasePage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CollectionsCase'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    PartnerApiCallPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerApiCall'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    WebhookDeliveryPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookDelivery'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    ReconciliationRunPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReconciliationRun'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    ReconciliationItemPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReconciliationItem'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    InvoicePage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Invoice'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    ReportDefinitionPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportDefinition'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    RegulatoryFeedPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegulatoryFeed'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    DataSourceHealthPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataSourceHealth'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    ModelVersionPage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelVersion'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    NoticeTemplatePage:
+      type: object
+      required:
+      - items
+      - page
+      - size
+      - totalItems
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NoticeTemplate'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalItems:
+          type: integer
+    AppealStatus:
+      type: string
+      enum:
+      - NONE
+      - OPEN
+      - INFO_REQUESTED
+      - PENDING_SECOND_APPROVAL
+      - UPHELD
+      - OVERTURNED
+    AppealOutcome:
+      type: string
+      enum:
+      - UPHELD
+      - OVERTURNED
+    AppealSummary:
+      type: object
+      properties:
+        appealId:
+          type: string
+          format: uuid
+        referenceNo:
+          type: string
+        status:
+          $ref: '#/components/schemas/AppealStatus'
+        dueAt:
+          type: string
+          format: date-time
+        newOffer:
+          $ref: '#/components/schemas/Money'
+        offerValidUntil:
+          type: string
+          format: date-time
+        message:
+          type: string
+      required:
+      - appealId
+      - referenceNo
+      - status
+      - dueAt
+    AppealRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          maxLength: 1000
+        documentIds:
+          type: array
+          items:
+            type: string
+    Appeal:
+      type: object
+      properties:
+        appealId:
+          type: string
+          format: uuid
+        referenceNo:
+          type: string
+        decisionId:
+          type: string
+          format: uuid
+        customerMask:
+          type: string
+        partnerId:
+          $ref: '#/components/schemas/PartnerId'
+        productType:
+          $ref: '#/components/schemas/ProductType'
+        aiOutcome:
+          $ref: '#/components/schemas/DecisionOutcome'
+        requestedAmount:
+          $ref: '#/components/schemas/Money'
+        aiAmount:
+          $ref: '#/components/schemas/Money'
+        reasonCodes:
+          type: array
+          items:
+            type: string
+        note:
+          type: string
+        channel:
+          type: string
+          enum:
+          - PARTNER_APP
+          - SERVICING_CHANNEL
+          - HOTLINE
+          - CASE
+        status:
+          $ref: '#/components/schemas/AppealStatus'
+        createdAt:
+          type: string
+          format: date-time
+        dueAt:
+          type: string
+          format: date-time
+        slaState:
+          type: string
+          enum:
+          - GREEN
+          - AMBER
+          - RED
+        assigneeId:
+          type: string
+          format: uuid
+        outcome:
+          $ref: '#/components/schemas/AppealOutcome'
+        outcomeReasonCode:
+          type: string
+        newOffer:
+          $ref: '#/components/schemas/Money'
+        decidedBy:
+          type: string
+        decidedAt:
+          type: string
+          format: date-time
+        pendingApprovalId:
+          type: string
+          format: uuid
+        offerValidUntil:
+          type: string
+          format: date-time
+      required:
+      - appealId
+      - referenceNo
+      - decisionId
+      - aiOutcome
+      - status
+      - createdAt
+      - dueAt
+      - slaState
+    AppealResolution:
+      type: object
+      properties:
+        outcome:
+          $ref: '#/components/schemas/AppealOutcome'
+        reasonCode:
+          type: string
+        newOfferAmount:
+          $ref: '#/components/schemas/Money'
+        comment:
+          type: string
+      required:
+      - outcome
+      - reasonCode
+    AppealInfoRequest:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+      - message
+  responses:
+    Problem400:
+      description: Invalid request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem401:
+      description: Not authenticated
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem403:
+      description: Not allowed for this client or role
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem404:
+      description: Not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem409:
+      description: Conflict with current state
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem410:
+      description: Gone (e.g. session-expired)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem422:
+      description: Business rule violated (problem type names the rule)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem429:
+      description: Rate limited
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Problem503:
+      description: Temporarily unavailable (e.g. partner-paused, otp-unavailable)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        maxLength: 64
+      description: Required on every partner write call (AC-35.2, AC-35.4)
+    Signature:
+      name: X-CreditPulse-Signature
+      in: header
+      required: true
+      schema:
+        type: string
+      description: HMAC-SHA256 over timestamp + body with the endpoint signing secret; stale or reused events are rejected (AC-33.4)
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+webhooks:
+  loan.booked:
+    post:
+      operationId: webhookLoanBooked
+      summary: Loan booked and disbursed; order can be confirmed
+      x-stories:
+      - US-41
+      - US-05
+      parameters:
+      - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerEvent'
+      responses:
+        '200':
+          description: Partner acknowledges; any non-2xx is retried with backoff (AC-41.3)
+  loan.updated:
+    post:
+      operationId: webhookLoanUpdated
+      summary: Schedule or balance changed (repayment, refund, restructuring, settlement)
+      x-stories:
+      - US-45
+      - US-22
+      - US-42
+      - US-48
+      parameters:
+      - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerEvent'
+      responses:
+        '200':
+          description: Partner acknowledges; any non-2xx is retried with backoff (AC-41.3)
+  decision.updated:
+    post:
+      operationId: webhookDecisionUpdated
+      summary: 'Appeal outcome: the AI decision was upheld or overturned (new offer)'
+      x-stories:
+      - US-18
+      - US-78
+      parameters:
+      - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerEvent'
+      responses:
+        '200':
+          description: Partner acknowledges; any non-2xx is retried with backoff (AC-41.3)
+  application.cancelled:
+    post:
+      operationId: webhookApplicationCancelled
+      summary: Application cancelled or booking failed
+      x-stories:
+      - US-03
+      - US-40
+      parameters:
+      - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerEvent'
+      responses:
+        '200':
+          description: Partner acknowledges; any non-2xx is retried with backoff (AC-41.3)
+  notice.requested:
+    post:
+      operationId: webhookNoticeRequested
+      summary: Show this notice in-app (HLB also sends required notices by SMS/email)
+      x-stories:
+      - US-56
+      parameters:
+      - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerEvent'
+      responses:
+        '200':
+          description: Partner acknowledges; any non-2xx is retried with backoff (AC-41.3)
+  partner.status_changed:
+    post:
+      operationId: webhookPartnerStatusChanged
+      summary: Partner or product paused, resumed or exiting
+      x-stories:
+      - US-65
+      - US-68
+      parameters:
+      - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerEvent'
+      responses:
+        '200':
+          description: Partner acknowledges; any non-2xx is retried with backoff (AC-41.3)
+  case.updated:
+    post:
+      operationId: webhookCaseUpdated
+      summary: A case the partner opened was answered or closed
+      x-stories:
+      - US-69
+      parameters:
+      - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerEvent'
+      responses:
+        '200':
+          description: Partner acknowledges; any non-2xx is retried with backoff (AC-41.3)

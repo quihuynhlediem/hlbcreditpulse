@@ -10,7 +10,7 @@ export async function toOffers(page: Page, opts: { entry?: string } = {}) {
   await openEntry(page, opts.entry ?? "A1");
   await page.getByTestId("method-vm").click();
   await page.getByTestId("place-order").click();
-  await page.waitForURL(/\/viettel-money\/offers\//, { timeout: 20_000 });
+  await page.waitForURL(/\/(viettel-money|grab|so-ban-hang)\/offers\//, { timeout: 20_000 });
   await expect(page.getByTestId("offers")).toBeVisible();
 }
 
@@ -31,8 +31,9 @@ export async function setScenario(page: Page, label: string) {
   await page.getByLabel("Kịch bản").selectOption({ label });
 }
 
-export async function setPersona(page: Page, label: string) {
-  await page.getByLabel("Nhân vật").selectOption({ label });
+/** The persona is read-only in the presenter bar (R-27); tests choose it through the entry deep link. */
+export async function personaShown(page: Page) {
+  return page.getByTestId("persona").getAttribute("data-persona");
 }
 
 /** Opens an entry directly with a persona override (the deep link used by the demo frame). */

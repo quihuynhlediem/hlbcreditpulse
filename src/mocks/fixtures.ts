@@ -47,7 +47,10 @@ export interface CustomerFixture {
   productType: ProductType;
   /** Limit shown before any consent when the partner holds a pre-screen result. */
   prescreenLimit?: number;
-  locked?: { reason: string };
+  /** Sources that never have enough history for this customer (a new driver's earnings, a new seller's sales). */
+  thinSources?: SourceId[];
+  /** Full name shown on the e-commerce delivery address. */
+  fullName: string;
   rungs: RungDef[];
   /** Sources already connected (seed consent receipts). */
   seedConsents: SourceId[];
@@ -63,7 +66,7 @@ export interface CustomerFixture {
 const M = 1_000_000;
 export const CUSTOMERS: CustomerFixture[] = [
   {
-    ref: "cus_mai", name: "Mai", display: "Mai · SEG-2 lương, chưa có CIC", segment: "SEG-2", partnerId: "viettel-money", productType: "PAYMENT_INSTALLMENT",
+    ref: "cus_mai", name: "Mai", display: "Mai · SEG-2 lương, chưa có CIC", segment: "SEG-2", partnerId: "viettel-money", productType: "PAYMENT_INSTALLMENT", fullName: "Nguyễn Thị Mai",
     rungs: [
       { rung: 1, sources: ["B-01", "AD-02"], cap: 3 * M, text: "Hạn mức khởi đầu" },
       { rung: 2, sources: ["AD-01"], cap: 8 * M, text: "Lịch sử ví" },
@@ -73,7 +76,7 @@ export const CUSTOMERS: CustomerFixture[] = [
     seedConsents: [], afBase: 0, afBySource: { "AD-01": 2.2 * M, "AD-05": 1.0 * M, "AD-03": 1.3 * M }, ekycDone: false, openLoans: 0, cic: "NO_FILE", riskGrade: "B",
   },
   {
-    ref: "cus_khoa", name: "Khoa", display: "Khoa · SEG-1 lương, có CIC", segment: "SEG-1", partnerId: "viettel-money", productType: "PAYMENT_INSTALLMENT", prescreenLimit: 30 * M,
+    ref: "cus_khoa", name: "Khoa", display: "Khoa · SEG-1 lương, có CIC", segment: "SEG-1", partnerId: "viettel-money", productType: "PAYMENT_INSTALLMENT", prescreenLimit: 30 * M, fullName: "Trần Minh Khoa",
     rungs: [
       { rung: 1, sources: ["B-01", "AD-02"], cap: 3 * M, text: "Hạn mức khởi đầu" },
       { rung: 2, sources: ["AD-01"], cap: 8 * M, text: "Lịch sử ví" },
@@ -83,7 +86,7 @@ export const CUSTOMERS: CustomerFixture[] = [
     seedConsents: ["AD-01", "AD-05", "B-02", "AD-03"], afBase: 0, afBySource: { "AD-01": 2 * M, "AD-05": 1 * M, "B-02": 1 * M, "AD-03": 3 * M }, ekycDone: true, openLoans: 1, cic: "FILE_FOUND", riskGrade: "A",
   },
   {
-    ref: "cus_tung", name: "Tùng", display: "Tùng · SEG-5 lần đầu số hóa", segment: "SEG-5", partnerId: "viettel-money", productType: "PAYMENT_INSTALLMENT",
+    ref: "cus_tung", name: "Tùng", display: "Tùng · SEG-5 lần đầu số hóa", segment: "SEG-5", partnerId: "viettel-money", productType: "PAYMENT_INSTALLMENT", fullName: "Lê Văn Tùng",
     rungs: [
       { rung: 1, sources: ["B-01", "AD-02"], cap: 2 * M, text: "Hạn mức khởi đầu" },
       { rung: 2, sources: ["AD-01"], cap: 5 * M, text: "Lịch sử ví" },
@@ -92,29 +95,43 @@ export const CUSTOMERS: CustomerFixture[] = [
     seedConsents: [], afBase: 0, afBySource: { "AD-01": 0.9 * M, "AD-05": 0.5 * M }, ekycDone: false, openLoans: 0, cic: "NO_FILE", riskGrade: "C",
   },
   {
-    ref: "cus_hung", name: "Hùng", display: "Hùng · SEG-3 tài xế Grab", segment: "SEG-3", partnerId: "grab", productType: "DRIVER_INSTANT_LOAN", prescreenLimit: 20 * M,
+    ref: "cus_hung", name: "Hùng", display: "Hùng · SEG-3 tài xế Grab", segment: "SEG-3", partnerId: "grab", productType: "PAYMENT_INSTALLMENT", prescreenLimit: 20 * M, fullName: "Phạm Văn Hùng",
     rungs: [
       { rung: 1, sources: ["B-01", "AD-02"], cap: 3 * M, text: "Hạn mức khởi đầu" },
+      { rung: 2, sources: ["AD-01"], cap: 8 * M, text: "Lịch sử ví Grab" },
       { rung: 5, sources: ["AD-07"], cap: 20 * M, text: "Thu nhập trên Grab" },
     ],
-    seedConsents: [], afBase: 0, afBySource: { "AD-07": 1.8 * M }, ekycDone: false, openLoans: 0, cic: "NO_FILE", riskGrade: "B",
+    seedConsents: [], afBase: 0, afBySource: { "AD-01": 1.0 * M, "AD-07": 1.8 * M }, ekycDone: false, openLoans: 0, cic: "NO_FILE", riskGrade: "B",
   },
   {
-    ref: "cus_hung_new", name: "Hùng (mới)", display: "Hùng (mới) · tài xế dưới 3 tháng", segment: "SEG-3", partnerId: "grab", productType: "DRIVER_INSTANT_LOAN",
-    locked: { reason: "Cần hoạt động ít nhất 3 tháng trên Grab để mở khóa. Hoạt động thêm 45 ngày để mở khóa." },
-    rungs: [{ rung: 1, sources: ["B-01", "AD-02"], cap: 3 * M, text: "Hạn mức khởi đầu" }],
-    seedConsents: [], afBase: 0, afBySource: {}, ekycDone: false, openLoans: 0, cic: "NO_FILE", riskGrade: "C",
+    ref: "cus_hung_new", name: "Hùng (mới)", display: "Hùng (mới) · tài xế dưới 3 tháng", segment: "SEG-3", partnerId: "grab", productType: "PAYMENT_INSTALLMENT", fullName: "Phạm Văn Hùng", thinSources: ["AD-07"],
+    rungs: [
+      { rung: 1, sources: ["B-01", "AD-02"], cap: 3 * M, text: "Hạn mức khởi đầu" },
+      { rung: 2, sources: ["AD-01"], cap: 8 * M, text: "Lịch sử ví Grab" },
+      { rung: 5, sources: ["AD-07"], cap: 20 * M, text: "Thu nhập trên Grab" },
+    ],
+    seedConsents: [], afBase: 0, afBySource: { "AD-01": 1.0 * M, "AD-07": 1.8 * M }, ekycDone: false, openLoans: 0, cic: "NO_FILE", riskGrade: "C",
   },
   {
-    ref: "cus_phung", name: "Phụng", display: "Phụng · SEG-4 chủ cửa hàng", segment: "SEG-4", partnerId: "so-ban-hang", productType: "SELLER_FUNDING", prescreenLimit: 50 * M,
+    ref: "cus_phung", name: "Phụng", display: "Phụng · SEG-4 chủ cửa hàng", segment: "SEG-4", partnerId: "so-ban-hang", productType: "PAYMENT_INSTALLMENT", prescreenLimit: 50 * M, fullName: "Võ Thị Phụng",
     rungs: [
       { rung: 1, sources: ["B-01", "AD-02"], cap: 5 * M, text: "Hạn mức khởi đầu" },
+      { rung: 2, sources: ["AD-01"], cap: 15 * M, text: "Lịch sử ví Sổ Bán Hàng" },
       { rung: 5, sources: ["AD-08"], cap: 50 * M, text: "Doanh số bán hàng" },
     ],
-    seedConsents: [], afBase: 0, afBySource: { "AD-08": 8 * M }, ekycDone: false, openLoans: 0, cic: "NO_FILE", riskGrade: "B",
+    seedConsents: [], afBase: 0, afBySource: { "AD-01": 1.5 * M, "AD-08": 8 * M }, ekycDone: false, openLoans: 0, cic: "NO_FILE", riskGrade: "B",
   },
   {
-    ref: "cus_an", name: "An", display: "An · đã có 3 khoản (chặn chồng nợ)", segment: "SEG-5", partnerId: "viettel-money", productType: "PAYMENT_INSTALLMENT", prescreenLimit: 20 * M,
+    ref: "cus_phung_new", name: "Phụng (mới)", display: "Phụng (mới) · cửa hàng dưới 90 ngày", segment: "SEG-4", partnerId: "so-ban-hang", productType: "PAYMENT_INSTALLMENT", fullName: "Võ Thị Phụng", thinSources: ["AD-08"],
+    rungs: [
+      { rung: 1, sources: ["B-01", "AD-02"], cap: 5 * M, text: "Hạn mức khởi đầu" },
+      { rung: 2, sources: ["AD-01"], cap: 15 * M, text: "Lịch sử ví Sổ Bán Hàng" },
+      { rung: 5, sources: ["AD-08"], cap: 50 * M, text: "Doanh số bán hàng" },
+    ],
+    seedConsents: [], afBase: 0, afBySource: { "AD-01": 1.5 * M, "AD-08": 8 * M }, ekycDone: false, openLoans: 0, cic: "NO_FILE", riskGrade: "C",
+  },
+  {
+    ref: "cus_an", name: "An", display: "An · đã có 3 khoản (chặn chồng nợ)", segment: "SEG-5", partnerId: "viettel-money", productType: "PAYMENT_INSTALLMENT", prescreenLimit: 20 * M, fullName: "Đỗ Thu An",
     rungs: [
       { rung: 1, sources: ["B-01", "AD-02"], cap: 3 * M, text: "Hạn mức khởi đầu" },
       { rung: 2, sources: ["AD-01"], cap: 8 * M, text: "Lịch sử ví" },
@@ -128,8 +145,8 @@ function clone(base: string, over: Partial<CustomerFixture>): CustomerFixture {
 }
 CUSTOMERS.push(
   clone("cus_mai", { ref: "cus_mai_loan", name: "Mai (đang trả góp)", display: "Mai (đang trả góp) · đã có khoản 12 triệu", seedConsents: ["AD-01", "AD-05"], ekycDone: true, openLoans: 1 }),
-  clone("cus_hung", { ref: "cus_hung_loan", name: "Hùng (đang vay)", display: "Hùng (đang vay) · khoản 8 triệu", seedConsents: ["AD-07"], ekycDone: true, openLoans: 1 }),
-  clone("cus_phung", { ref: "cus_phung_loan", name: "Phụng (đang vay)", display: "Phụng (đang vay) · khoản 30 triệu", seedConsents: ["AD-08"], ekycDone: true, openLoans: 1 }),
+  clone("cus_hung", { ref: "cus_hung_loan", name: "Hùng (đang vay)", display: "Hùng (đang vay) · khoản 8 triệu", seedConsents: ["AD-01", "AD-07"], ekycDone: true, openLoans: 1 }),
+  clone("cus_phung", { ref: "cus_phung_loan", name: "Phụng (đang vay)", display: "Phụng (đang vay) · khoản 15 triệu", seedConsents: ["AD-01", "AD-08"], ekycDone: true, openLoans: 1 }),
 );
 export const CUSTOMER_BY_REF = Object.fromEntries(CUSTOMERS.map((c) => [c.ref, c])) as Record<string, CustomerFixture>;
 

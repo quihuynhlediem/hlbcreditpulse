@@ -6,14 +6,14 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin", "vietnamese"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "HLB CreditPulse — demo",
-  description: "Demo MVP: HLB CreditPulse credit engine behind partner apps. Dữ liệu mô phỏng, chỉ phục vụ trình diễn.",
+  title: "HLB CreditPulse",
+  description: "HLB CreditPulse: instant, fair credit inside partner apps; Hong Leong Bank Vietnam is the lender.",
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="vi" className={inter.variable}>
+    <html lang="en" className={inter.variable}>
       <body>
         <Providers>{children}</Providers>
       </body>

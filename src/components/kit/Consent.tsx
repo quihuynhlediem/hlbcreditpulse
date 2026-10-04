@@ -4,6 +4,7 @@ import { useCreateConsent } from "@/api/hooks";
 import { track } from "@/api/track";
 import type { PartnerId, SourceId } from "@/api/types";
 import { Btn, Chip, ErrorBox, Lockup } from "@/components/ui";
+import { useT } from "@/i18n";
 
 interface ConsentCopy { title: string; read: string; purpose: string; retention: string }
 const RETAIN = "12 tháng kể từ ngày bạn đồng ý, hoặc đến khi bạn rút lại.";
@@ -21,15 +22,16 @@ export const CONSENT_COPY: Partial<Record<SourceId, (partner: string) => Consent
 };
 
 export function ConsentSheet({ sourceId, customerRef, partnerId, partnerName, stepLabel, onGranted, onDeclined, declineHint }: { sourceId: SourceId; customerRef: string; partnerId: PartnerId; partnerName: string; stepLabel?: string; onGranted: () => void; onDeclined: () => void; declineHint?: string }) {
+  const t = useT();
   const create = useCreateConsent();
   const [declined, setDeclined] = useState(false);
   const copy = (CONSENT_COPY[sourceId] ?? CONSENT_COPY["AD-01"]!)(partnerName);
-  const rows: [string, string][] = [["Dữ liệu được đọc", copy.read], ["Mục đích", copy.purpose], ["Thời gian lưu", copy.retention], ["Rút lại", WITHDRAW]];
+  const rows: [string, string][] = [[t("Dữ liệu được đọc"), t(copy.read)], [t("Mục đích"), t(copy.purpose)], [t("Thời gian lưu"), t(copy.retention)], [t("Rút lại"), t(WITHDRAW)]];
   return (
-    <div className="absolute inset-0 z-20 flex flex-col justify-end bg-black/45" role="dialog" aria-modal="true" aria-label="Đồng ý chia sẻ dữ liệu">
+    <div className="absolute inset-0 z-20 flex flex-col justify-end bg-black/45" role="dialog" aria-modal="true" aria-label={t("Đồng ý chia sẻ dữ liệu")}>
       <div className="max-h-full space-y-3 overflow-y-auto rounded-t-[20px] bg-card p-5 pb-6" data-testid="consent-sheet" data-source={sourceId}>
-        {stepLabel && <Chip>{stepLabel}</Chip>}
-        <h2 className="text-[17px] font-bold leading-snug text-ink">{copy.title}</h2>
+        {stepLabel && <Chip>{t(stepLabel)}</Chip>}
+        <h2 className="text-[17px] font-bold leading-snug text-ink">{t(copy.title)}</h2>
         {rows.map(([k, v]) => (
           <div key={k}>
             <div className="text-xs font-semibold text-muted">{k}</div>
@@ -37,8 +39,8 @@ export function ConsentSheet({ sourceId, customerRef, partnerId, partnerName, st
           </div>
         ))}
         <Lockup />
-        {create.isError && <ErrorBox>Chưa lưu được lựa chọn. Chưa có dữ liệu nào được chia sẻ.</ErrorBox>}
-        {declined && declineHint && <p className="rounded-xl bg-primary-soft p-3 text-[13px] text-ink">{declineHint}</p>}
+        {create.isError && <ErrorBox>{t("Chưa lưu được lựa chọn. Chưa có dữ liệu nào được chia sẻ.")}</ErrorBox>}
+        {declined && declineHint && <p className="rounded-xl bg-primary-soft p-3 text-[13px] text-ink">{t(declineHint)}</p>}
         <Btn
           disabled={create.isPending}
           onClick={async () => {
@@ -49,10 +51,10 @@ export function ConsentSheet({ sourceId, customerRef, partnerId, partnerName, st
             } catch { /* surfaced via create.isError */ }
           }}
         >
-          {create.isPending ? "Đang lưu…" : create.isError ? "Thử lại" : "Đồng ý kết nối"}
+          {create.isPending ? t("Đang lưu…") : create.isError ? t("Thử lại") : t("Đồng ý kết nối")}
         </Btn>
         <Btn variant="secondary" onClick={() => { track("consent_declined", { sourceId }); if (declineHint && !declined) setDeclined(true); else onDeclined(); }}>
-          {declined && declineHint ? "Vẫn không đồng ý" : "Không đồng ý"}
+          {declined && declineHint ? t("Vẫn không đồng ý") : t("Không đồng ý")}
         </Btn>
       </div>
     </div>

@@ -1,5 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
-import { connectNext, openAs, openEntry, setPersona, setScenario, toOffers } from "./helpers";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
+import { connectNext, openAs, openEntry, setScenario, toOffers } from "./helpers";
 
 /** Khoa (pre-approved, eKYC done, data connected): Shopee → offers → first package → decision. */
 async function khoaToDecision(page: Page) {
@@ -13,12 +14,13 @@ async function khoaToDecision(page: Page) {
 }
 
 test.describe("EP-2 / EP-3 consent, eKYC and data", () => {
-  test("AC-02.3 blocked storage runs in memory and says so", async ({ page }) => {
+  test("DEMO-02.3 blocked storage runs in memory and says so", async ({ page }) => {
     await page.addInitScript(() => {
       Object.defineProperty(window, "localStorage", { configurable: true, get() { throw new Error("blocked"); } });
     });
     await page.goto("/");
-    await expect(page.getByText("Không lưu được dữ liệu trên trình duyệt này")).toBeVisible();
+    // With storage blocked the saved language cannot be read either, so the app falls back to English (R-26).
+    await expect(page.getByText("This browser cannot store data")).toBeVisible();
     await expect(page.getByTestId("entry-A1")).toBeVisible();
   });
 
@@ -101,32 +103,34 @@ test.describe("EP-5 / EP-6 decision and guardrails", () => {
     await expect(page.getByTestId("cost-per-decision")).toContainText("dưới ngưỡng 30.000 ₫");
   });
 
-  test("AC-19.1 / AC-34.1 a lower DTI cap declines an instalment that no longer fits", async ({ page }) => {
+  test("AC-19.1 / AC-63.4 / AC-16.7 an approved lower DTI cap turns an instalment that no longer fits into a counter-offer", async ({ page }) => {
     await page.goto("/creditpulse/guardrails");
     await page.getByLabel("Trần DTI").fill("5");
-    await page.getByRole("button", { name: "Lưu chính sách" }).click();
+    await page.getByRole("button", { name: "Gửi duyệt chính sách" }).click();
+    await page.getByTestId("approve-as-checker").click();
     await expect(page.getByTestId("policy-msg")).toContainText("áp dụng cho quyết định tiếp theo");
     await openAs(page, "A", "A1", "cus_khoa");
     await page.getByTestId("method-vm").click();
     await page.getByTestId("place-order").click();
     await page.waitForURL(/\/viettel-money\/offers\//, { timeout: 20_000 });
     await page.getByTestId("choose-package").click();
-    await expect(page.getByTestId("decision")).toHaveAttribute("data-outcome", "DECLINED", { timeout: 20_000 });
-    await expect(page.getByTestId("decision-reason")).toContainText("mức trần DTI");
+    await expect(page.getByTestId("decision")).toHaveAttribute("data-outcome", "COUNTER_OFFER", { timeout: 20_000 });
+    await expect(page.getByTestId("decision-reason")).toContainText("vượt khả năng chi trả ước tính");
   });
 
-  test("AC-11.2 a device shared by many applicants is flagged and goes to the manual tier", async ({ page }) => {
-    await page.goto("/creditpulse/manual");
-    await page.getByTestId("manual-case").first().getByRole("link").click();
+  test("AC-11.2 a device shared by many applicants is flagged and the engine caps the amount itself", async ({ page }) => {
+    await page.goto("/creditpulse/appeals");
+    await page.getByTestId("appeal").first().getByRole("link").click();
     await expect(page.getByTestId("device-flag")).toContainText("Thiết bị dùng chung");
-    await expect(page.getByTestId("decision-detail")).toContainText("MANUAL");
+    await expect(page.getByTestId("decision-detail")).toContainText("Duyệt số tiền thấp hơn");
+    await expect(page.getByTestId("decision-detail")).not.toContainText("MANUAL");
   });
 
-  test("AC-18.2 an overdue SLA is highlighted", async ({ page }) => {
-    await page.goto("/creditpulse/manual");
-    const overdue = page.locator('[data-testid="manual-case"][data-overdue="true"]');
+  test("AC-18.2 an appeal past its 2-working-day clock is highlighted", async ({ page }) => {
+    await page.goto("/creditpulse/appeals");
+    const overdue = page.locator('[data-testid="appeal"][data-sla="RED"]');
     await expect(overdue.first()).toBeVisible();
-    await expect(overdue.first()).toContainText("Quá hạn SLA");
+    await expect(overdue.first()).toContainText("Quá hạn 2 ngày làm việc");
   });
 
   test("AC-20.4 an expired signing session offers to sign again", async ({ page }) => {
@@ -142,7 +146,7 @@ test.describe("EP-5 / EP-6 decision and guardrails", () => {
     await expect(page.getByTestId("order-result")).toContainText("Đặt hàng thành công", { timeout: 15_000 });
   });
 
-  test("AC-11.1 / AC-33.2 booking sends the payout to the partner settlement account and webhooks join the timeline", async ({ page }) => {
+  test("AC-11.1 / DEMO-33.2 booking sends the payout to the partner settlement account and webhooks join the timeline", async ({ page }) => {
     await khoaToDecision(page);
     await page.getByRole("button", { name: "Tiếp tục ký hợp đồng" }).click();
     await page.getByLabel(/Nhập mã OTP/).fill("123456");
@@ -173,8 +177,7 @@ test.describe("EP-7 servicing, refunds and behaviour rises", () => {
   });
 
   test("AC-22.1 / AC-22.2 a partial return lowers the principal, pauses the due date and sends no adverse CIC", async ({ page }) => {
-    await openAs(page, "A", "A2", "cus_mai");
-    await setPersona(page, "Mai (đang trả góp) · đã có khoản 12 triệu");
+    await openAs(page, "A", "A5", "cus_mai_loan");
     await page.goto("/shopee/orders/SPE-2026-0001/return");
     await page.getByLabel("Số tiền hoàn").selectOption({ label: "3.000.000 ₫" });
     await page.getByRole("button", { name: "Gửi yêu cầu trả hàng" }).click();
@@ -187,8 +190,7 @@ test.describe("EP-7 servicing, refunds and behaviour rises", () => {
   });
 
   test("AC-22.3 a rejected return keeps the original schedule", async ({ page }) => {
-    await openAs(page, "A", "A2", "cus_mai");
-    await setPersona(page, "Mai (đang trả góp) · đã có khoản 12 triệu");
+    await openAs(page, "A", "A5", "cus_mai_loan");
     await page.goto("/shopee/orders/SPE-2026-0001/return");
     await page.getByTestId("seller-rejects").click();
     await expect(page.getByTestId("refund-status")).toContainText("Lịch trả được giữ nguyên");
@@ -208,32 +210,12 @@ test.describe("EP-7 servicing, refunds and behaviour rises", () => {
     await expect(page.getByTestId("graduation")).not.toContainText("phí");
   });
 
-  test("AC-29.1 / AC-29.2 graduation offers an HLB card and a seller discount code, never a cash reward", async ({ page }) => {
+  test("AC-29.1 / AC-29.3 graduation offers an HLB card and a seller discount code, never a cash reward", async ({ page }) => {
     await openAs(page, "A", "A2", "cus_khoa");
     await page.goto("/viettel-money/graduation");
     const g = page.getByTestId("graduation");
     await expect(g).toContainText("Thẻ HLB");
     await expect(g).toContainText("Mã giảm giá từ người bán");
     await expect(g).toContainText("Không có thưởng tiền mặt"); // merchant-led referral only (D-11)
-  });
-});
-
-test.describe("EP-8 Grab and Sổ Bán Hàng servicing", () => {
-  test("AC-25.2 two income drops of more than 50% scale deductions down with a reminder", async ({ page }) => {
-    await page.goto("/grab/loan/schedule");
-    await setPersona(page, "Hùng (đang vay) · khoản 8 triệu");
-    await page.getByTestId("simulate-low").click();
-    await expect(page.getByTestId("payout-note")).toContainText("Đã khấu trừ");
-    await page.getByTestId("simulate-low").click();
-    await expect(page.getByTestId("payout-note")).toContainText("giảm mức khấu trừ");
-    await expect(page.getByTestId("payout-note")).toContainText("Nhắc nhở");
-  });
-
-  test("AC-28.2 day 45 without the minimum shows a warning that a settlement clears", async ({ page }) => {
-    await openEntry(page, "C4");
-    await expect(page.getByTestId("min-warning")).toContainText("Đã 45 ngày chưa đạt mức tối thiểu");
-    await page.getByTestId("simulate").click();
-    await expect(page.getByTestId("payout-note")).toBeVisible();
-    await expect(page.getByTestId("min-warning")).toBeHidden();
   });
 });

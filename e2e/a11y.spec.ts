@@ -11,14 +11,15 @@ const SCREENS: [string, string, string][] = [
   ["loans (SCR-29)", "/viettel-money/loans", "cus_khoa"],
   ["privacy (SCR-20)", "/viettel-money/privacy", "cus_khoa"],
   ["Grab home (SCR-40)", "/grab", "cus_hung"],
-  ["Grab offer (SCR-42)", "/grab/loan/offer", "cus_hung"],
-  ["Grab schedule (SCR-46)", "/grab/loan/schedule", "cus_hung_loan"],
+  ["Grab offers (SCR-42)", "/grab/limit?from=hub", "cus_hung"],
+  ["Grab loans (SCR-29)", "/grab/loans", "cus_hung_loan"],
   ["SBH home (SCR-50)", "/so-ban-hang", "cus_phung"],
-  ["SBH offer (SCR-53)", "/so-ban-hang/loan/offer", "cus_phung"],
-  ["SBH tracker (SCR-57)", "/so-ban-hang/funding/tracker", "cus_phung_loan"],
+  ["SBH limit hub (SCR-26)", "/so-ban-hang/limit?from=hub", "cus_phung"],
+  ["SBH loans (SCR-29)", "/so-ban-hang/loans", "cus_phung_loan"],
   ["console log (SCR-60)", "/creditpulse/decisions", "cus_mai"],
   ["console ranking (SCR-62)", "/creditpulse/ranking", "cus_mai"],
   ["console guardrails (SCR-66)", "/creditpulse/guardrails", "cus_mai"],
+  ["console appeals (SCR-63)", "/creditpulse/appeals", "cus_mai"],
 ];
 
 for (const [name, path, persona] of SCREENS) {

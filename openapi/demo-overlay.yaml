@@ -1,0 +1,147 @@
+openapi: 3.1.0
+info:
+  title: CreditPulse demo overlay (Step 19) — NOT part of the product contract
+  version: 1.0.0-demo
+  description: 'Demo-only operations and schemas merged into the product contract at type-generation time (scripts/build-contract.mjs). Product contract: openapi/openapi.yaml (synced from the PRD build
+    pack).'
+paths:
+  /api/v1/demo/scenario:
+    post:
+      operationId: setDemoScenario
+      tags:
+      - demo
+      summary: Force a scenario (mock mode only)
+      x-stories:
+      - US-02
+      x-mock-only: true
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScenarioSet'
+            example:
+              scenario: THIN_FILE
+      responses:
+        '200':
+          description: OK
+        default:
+          description: Problem
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      x-demo-only: true
+  /api/v1/demo/reset:
+    post:
+      operationId: resetDemoData
+      tags:
+      - demo
+      summary: Reset fixtures (mock mode only)
+      x-stories:
+      - US-02
+      x-mock-only: true
+      security: []
+      responses:
+        '200':
+          description: OK
+        default:
+          description: Problem
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      x-demo-only: true
+  /api/v1/console/api-calls:
+    get:
+      operationId: listApiCalls
+      tags:
+      - console
+      summary: API inspector timeline
+      x-stories:
+      - US-33
+      parameters:
+      - name: flow
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiCall'
+        default:
+          description: Problem
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      x-demo-only: true
+      security: []
+components:
+  schemas:
+    ScenarioSet:
+      type: object
+      properties:
+        scenario:
+          $ref: '#/components/schemas/ScenarioName'
+      required:
+      - scenario
+    ScenarioName:
+      type: string
+      enum:
+      - APPROVE
+      - THIN_FILE
+      - NOT_APPROVED
+      - COUNTER_OFFER
+      - SLOW
+      - EKYC_FAIL
+      - SOURCE_DOWN
+      - SESSION_EXPIRED
+    ApiCall:
+      type: object
+      properties:
+        callId:
+          type: string
+          format: uuid
+        flow:
+          type: string
+        method:
+          type: string
+        path:
+          type: string
+        status:
+          type: integer
+        latencyMs:
+          type: integer
+        idempotencyKey:
+          type: string
+        request:
+          type: object
+          additionalProperties: true
+        response:
+          type: object
+          additionalProperties: true
+        screen:
+          type: string
+        at:
+          type: string
+          format: date-time
+      required:
+      - callId
+      - flow
+      - method
+      - path
+      - status
+      - latencyMs
+      - idempotencyKey
+      - request
+      - response
+      - screen
+      - at

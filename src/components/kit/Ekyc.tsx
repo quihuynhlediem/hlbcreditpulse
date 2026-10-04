@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useCreateEkyc } from "@/api/hooks";
 import { track } from "@/api/track";
 import { Btn, ErrorBox, Lockup } from "@/components/ui";
+import { useT } from "@/i18n";
 import { BottomBar } from "./PhoneShell";
 
 type Phase = "idle" | "reading" | "matching" | "passed";
@@ -11,6 +12,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** NFC chip + face match (simulated, F-05). 3 chip failures open the capture fallback; 3 face failures offer another payment method. */
 export function EkycFlow({ customerRef, onPassed, onCancel, cancelLabel = "Chọn cách thanh toán khác" }: { customerRef: string; onPassed: () => void; onCancel: () => void; cancelLabel?: string }) {
+  const t = useT();
   const ekyc = useCreateEkyc();
   const [phase, setPhase] = useState<Phase>("idle");
   const [chipFails, setChipFails] = useState(0);
@@ -52,18 +54,18 @@ export function EkycFlow({ customerRef, onPassed, onCancel, cancelLabel = "Chọ
   }
 
   const steps = [
-    { label: "Đọc chip CCCD", done: phase === "matching" || phase === "passed" },
-    { label: "So khớp khuôn mặt", done: phase === "passed" },
+    { label: t("Đọc chip CCCD"), done: phase === "matching" || phase === "passed" },
+    { label: t("So khớp khuôn mặt"), done: phase === "passed" },
   ];
-  const title = phase === "reading" ? "Đang đọc chip CCCD…" : phase === "matching" ? "Đang so khớp khuôn mặt…" : phase === "passed" ? "Đã xác thực danh tính" : fallback ? "Chụp CCCD và quét khuôn mặt" : "Đặt CCCD gắn chip sát mặt sau điện thoại";
+  const title = t(phase === "reading" ? "Đang đọc chip CCCD…" : phase === "matching" ? "Đang so khớp khuôn mặt…" : phase === "passed" ? "Đã xác thực danh tính" : fallback ? "Chụp CCCD và quét khuôn mặt" : "Đặt CCCD gắn chip sát mặt sau điện thoại");
   return (
     <>
       <div className="flex flex-1 flex-col items-center gap-4 p-5" data-testid="ekyc">
         <div className="grid h-60 w-40 place-items-center rounded-[20px] border-2 border-primary bg-primary-soft">
-          <div className="flex flex-col items-center gap-1 rounded-lg bg-card px-3 py-2 text-xs font-semibold">CCCD gắn chip<span className="h-6 w-6 rounded-full bg-primary" /></div>
+          <div className="flex flex-col items-center gap-1 rounded-lg bg-card px-3 py-2 text-xs font-semibold">{t("CCCD gắn chip")}<span className="h-6 w-6 rounded-full bg-primary" /></div>
         </div>
         <h2 className="text-center text-base font-bold text-ink" role="status">{title}</h2>
-        <p className="text-center text-[13px] text-muted">Giữ yên vài giây. Sau đó bạn sẽ quét khuôn mặt.</p>
+        <p className="text-center text-[13px] text-muted">{t("Giữ yên vài giây. Sau đó bạn sẽ quét khuôn mặt.")}</p>
         <div className="w-full space-y-2 rounded-xl bg-card p-3.5">
           {steps.map((s) => (
             <div key={s.label} className="flex items-center gap-2.5 text-[13px]">
@@ -72,17 +74,17 @@ export function EkycFlow({ customerRef, onPassed, onCancel, cancelLabel = "Chọ
             </div>
           ))}
         </div>
-        {msg && <ErrorBox>{msg}</ErrorBox>}
+        {msg && <ErrorBox>{t(msg)}</ErrorBox>}
       </div>
       <BottomBar>
         <Lockup />
         {faceFails >= 3 ? (
-          <Btn onClick={onCancel}>{cancelLabel}</Btn>
+          <Btn onClick={onCancel}>{t(cancelLabel)}</Btn>
         ) : (
           <>
-            <Btn disabled={phase !== "idle"} onClick={() => run(fallback ? "CAPTURE_FALLBACK" : "NFC_CHIP")}>{phase !== "idle" ? "Đang xác thực…" : chipFails > 0 || faceFails > 0 ? "Thử lại" : "Bắt đầu quét"}</Btn>
-            {!fallback && chipFails > 0 && <Btn variant="secondary" onClick={() => { setFallback(true); setMsg(null); }}>Chụp CCCD thay thế</Btn>}
-            {fallback && faceFails > 0 && <Btn variant="secondary" onClick={onCancel}>{cancelLabel}</Btn>}
+            <Btn disabled={phase !== "idle"} onClick={() => run(fallback ? "CAPTURE_FALLBACK" : "NFC_CHIP")}>{phase !== "idle" ? t("Đang xác thực…") : chipFails > 0 || faceFails > 0 ? t("Thử lại") : t("Bắt đầu quét")}</Btn>
+            {!fallback && chipFails > 0 && <Btn variant="secondary" onClick={() => { setFallback(true); setMsg(null); }}>{t("Chụp CCCD thay thế")}</Btn>}
+            {fallback && faceFails > 0 && <Btn variant="secondary" onClick={onCancel}>{t(cancelLabel)}</Btn>}
           </>
         )}
       </BottomBar>

@@ -1,5 +1,6 @@
 import { http, HttpResponse, delay, type HttpHandler } from "msw";
-import type { ApiCall, ConsentReceipt, Decision, DecisionSummary, Instalment, ProductType, SourceId } from "@/api/types";
+import type { ApiCall, Appeal, AppealSummary, ConsentReceipt, Decision, DecisionSummary, Instalment, ProductType, SourceId } from "@/api/types";
+import { trDeep, type Locale } from "@/i18n";
 import { CUSTOMER_BY_REF, SOURCES, SOURCE_BY_ID } from "./fixtures";
 import { addDays, getDb, makeSchedule, newId, resetDemoData, saveDb, type StoredDecision } from "./db";
 import { RANGE, assess, buildPackages, currentLimit, eirFor, ladderFor, money, offerSetFor, score, type Ctx } from "./engine";
@@ -17,12 +18,14 @@ function ctxFor(ref: string): Ctx | null {
   const connected = new Set<SourceId>(db.consents.filter((c) => c.customerRef === ref && c.status === "GRANTED").map((c) => c.sourceId));
   const insufficient = new Set<SourceId>();
   if (db.scenario === "THIN_FILE") for (const s of ["AD-01", "AD-05", "AD-04"] as SourceId[]) if (connected.has(s)) insufficient.add(s);
+  // A new driver's earnings or a new seller's sales do not have enough history yet (AC-12.4, AC-23.2, AC-26.2).
+  for (const s of customer.thinSources ?? []) if (connected.has(s)) insufficient.add(s);
   return { customer, connected, scenario: db.scenario, insufficient };
 }
 const openLoans = (ref: string) => getDb().loans.filter((l) => l.customerRef === ref && l.status !== "SETTLED").length;
 
 /** Registers an operation: logs it for the API inspector, applies error and slow scenarios. */
-function op(method: "get" | "post" | "put", path: string, operationId: string, fn: (a: { req: Request; params: Record<string, string>; body: Json }) => Promise<Response> | Response, o: { log?: boolean; baseDelay?: number } = {}): HttpHandler {
+function op(method: "get" | "post" | "put" | "delete", path: string, operationId: string, fn: (a: { req: Request; params: Record<string, string>; body: Json }) => Promise<Response> | Response, o: { log?: boolean; baseDelay?: number } = {}): HttpHandler {
   return http[method](`*${path}`, async ({ request, params }) => {
     const db = getDb();
     const started = performance.now();
@@ -33,9 +36,15 @@ function op(method: "get" | "post" | "put", path: string, operationId: string, f
     const base = o.baseDelay ?? 250;
     await delay(base);
     if (db.errorOp === operationId) {
-      res = problem(500, "Dịch vụ tạm thời gián đoạn", "internal", "Mô phỏng lỗi theo kịch bản error-" + operationId);
+      res = problem(500, "Dịch vụ tạm thời gián đoạn", "internal", "Vui lòng thử lại sau.");
     } else {
       res = await fn({ req: request, params: params as Record<string, string>, body });
+    }
+    // Content (copy, reason texts, problem titles) is served in the requested language (AC-17.4, D-70, D-80).
+    const lang: Locale = (request.headers.get("accept-language") ?? "en").startsWith("vi") ? "vi" : "en";
+    if (lang === "en" && (res.headers.get("content-type") ?? "").includes("json")) {
+      const payload = await res.clone().json().catch(() => undefined);
+      if (payload !== undefined) res = new Response(JSON.stringify(trDeep(payload, lang)), { status: res.status, headers: res.headers });
     }
     if (o.log !== false) {
       let resBody: unknown = {};
@@ -58,13 +67,54 @@ const webhookLog = (name: string, partner: string, detail: Json) => {
 };
 
 const ok = (data: unknown, status = 200) => HttpResponse.json(data as Json, { status });
-const REQUIRES_KEY = (product: ProductType) => product !== "PAYMENT_INSTALLMENT";
+
+/** Demo-only: the acting staff role travels in a header so the mock can enforce maker ≠ checker (AC-60.2). */
+const actorOf = (req: Request) => req.headers.get("x-demo-actor") ?? "operator.demo@hlb";
+function newApproval(kind: string, targetId: string, diff: unknown, reason: string, makerId: string) {
+  const db = getDb();
+  const a = { approvalId: newId(), kind, targetId, diff: diff as Json, reason, makerId, status: "PENDING", expiresAt: new Date(Date.now() + 2 * 86400000).toISOString(), comment: "" };
+  db.approvals = [a, ...(db.approvals ?? [])];
+  return a;
+}
+
+
+/* ---------- appeals (R-25, D-78): human reassessment only when the customer asks ---------- */
+const REVIEWER_AUTHORITY = 20_000_000;
+/** Two working days from `from`, skipping Saturday and Sunday. */
+function twoWorkingDays(from: Date) { const d = new Date(from); let n = 0; while (n < 2) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) n += 1; } return d; }
+function slaOf(a: { status: string; createdAt: string; dueAt: string }, now = Date.now()) {
+  if (a.status === "UPHELD" || a.status === "OVERTURNED" || a.status === "INFO_REQUESTED") return "GREEN" as const;
+  const due = new Date(a.dueAt).getTime(), start = new Date(a.createdAt).getTime();
+  if (now > due) return "RED" as const;
+  return (due - now) / Math.max(1, due - start) <= 0.25 ? ("AMBER" as const) : ("GREEN" as const);
+}
+const summaryOf = (a: Appeal): AppealSummary => ({ appealId: a.appealId, referenceNo: a.referenceNo, status: a.status, dueAt: a.dueAt, newOffer: a.newOffer, offerValidUntil: a.offerValidUntil });
+const appealFor = (decisionId: string) => getDb().appeals.find((a) => a.decisionId === decisionId);
+/** The decision as served: the stored AI outcome plus the appeal summary and whether it can still be appealed. */
+function decisionView(d: StoredDecision) {
+  const a = appealFor(d.decisionId);
+  const open = d.outcome !== "APPROVED" && !a && (!d.appealDeadline || new Date(d.appealDeadline).getTime() > Date.now());
+  return { ...d, appealable: open, ...(a ? { appeal: summaryOf(a) } : {}) };
+}
+/** Amount the customer may sign for: the AI amount, or the reviewer's new offer after an overturn. */
+function effectiveAmount(d: StoredDecision): number | undefined {
+  const a = appealFor(d.decisionId);
+  if (a?.status === "OVERTURNED" && a.newOffer) return a.newOffer.amount;
+  if (d.outcome === "APPROVED" || d.outcome === "COUNTER_OFFER") return d.approvedAmount?.amount;
+  return undefined;
+}
+function applyAppealOutcome(a: Appeal, outcome: "UPHELD" | "OVERTURNED", reasonCode: string, by: string, newOffer?: number) {
+  a.status = outcome; a.outcome = outcome; a.outcomeReasonCode = reasonCode; a.decidedBy = by; a.decidedAt = new Date().toISOString();
+  if (outcome === "OVERTURNED" && newOffer) { a.newOffer = money(newOffer); a.offerValidUntil = addDays(new Date(), 7).toISOString(); }
+  const d = getDb().decisions[a.decisionId];
+  webhookLog("decision.updated", String(d?.partnerId ?? ""), { decisionId: a.decisionId, appeal: outcome });
+  getDb().audit.unshift({ at: new Date().toISOString(), actor: by, action: "appeal.decide", detail: `${a.referenceNo}: ${outcome} ${reasonCode}${newOffer ? ` · ${newOffer}` : ""}` });
+}
 
 export const handlers: HttpHandler[] = [
   op("post", "/api/v1/prescreens", "createPrescreen", ({ body }) => {
     const ref = String(body.hashedCustomerId ?? "").replace(/^h_/, "");
     const ctx = ctxFor(ref);
-    if (ctx?.customer.locked) return ok({ eligible: false, reason: ctx.customer.locked.reason });
     if (!ctx || !ctx.customer.prescreenLimit) return ok({ eligible: false });
     const lim = ctx.customer.prescreenLimit;
     return ok({ eligible: true, bandMin: money(lim / 2), bandMax: money(lim), rung: ctx.customer.rungs.at(-1)?.rung ?? 1, validUntil: addDays(new Date(), 7).toISOString() });
@@ -74,10 +124,9 @@ export const handlers: HttpHandler[] = [
     const ref = String(body.customerRef);
     const ctx = ctxFor(ref);
     if (!ctx) return problem(404, "Không tìm thấy khách hàng", "customer-not-found");
-    if (ctx.customer.locked) return problem(422, ctx.customer.locked.reason, "not-eligible", ctx.customer.locked.reason);
     const amount = Number((body.amount as { amount: number }).amount);
     const product = body.productType as ProductType;
-    if (product === "PAYMENT_INSTALLMENT" && (amount < RANGE.min || amount > RANGE.max)) return problem(422, "Giá trị đơn hàng ngoài phạm vi trả góp", "order-out-of-range");
+    if (amount < RANGE.min || amount > RANGE.max) return problem(422, "Giá trị đơn hàng ngoài phạm vi trả góp", "order-out-of-range");
     if (getDb().scenario === "SLOW") await delay(3500);
     const id = newId();
     getDb().offers[id] = { offerRequestId: id, customerRef: ref, partnerId: String(body.partnerId), productType: product, amount, orderRef: body.orderRef as string | undefined, createdAt: new Date().toISOString() };
@@ -143,32 +192,51 @@ export const handlers: HttpHandler[] = [
     const product = body.productType as ProductType;
     const ek = db.ekyc[ref];
     if (!(ctx.customer.ekycDone || ek?.status === "PASSED")) return problem(422, "Cần xác thực danh tính trước khi xét duyệt", "ekyc-required");
-    const need = REQUIRES_KEY(product) ? ctx.customer.rungs.at(-1)!.sources.filter((s) => !["B-01", "AD-02"].includes(s)) : [];
-    if (need.some((s) => !ctx.connected.has(s))) return problem(422, "Cần đồng ý chia sẻ dữ liệu trước khi xét duyệt", "consent-required");
     const amount = Number((body.amount as { amount: number }).amount);
     const out = assess({ ctx, amount, product, packageId: body.packageId as string | undefined, openLoans: openLoans(ref), maxOpenLoans: db.policy.maxOpenLoans, dtiCap: db.policy.dtiCap });
     const d: StoredDecision = { ...(out as Decision), decisionId: newId(), decidedAt: new Date().toISOString(), customerRef: ref, partnerId: ctx.customer.partnerId, productType: product, amount, packageId: body.packageId as string | undefined };
     db.decisions[d.decisionId] = d;
-    if (d.tier === "MANUAL") db.manual = [{ caseId: newId(), decisionId: d.decisionId, slaDueAt: new Date(Date.now() + 4 * 3_600_000).toISOString(), status: "OPEN", suggestedAction: "Cần xem thêm" }, ...db.manual];
-    return ok(d, 201);
+    return ok(decisionView(d), 201);
   }, { baseDelay: 900 }),
 
   op("get", "/api/v1/decisions/:decisionId", "getDecision", ({ params }) => {
     const d = getDb().decisions[params.decisionId];
-    return d ? ok(d) : problem(404, "Không tìm thấy quyết định", "decision-not-found");
+    return d ? ok(decisionView(d)) : problem(404, "Không tìm thấy quyết định", "decision-not-found");
+  }, { log: false, baseDelay: 100 }),
+
+  op("post", "/api/v1/decisions/:decisionId/appeals", "createAppeal", ({ params, body }) => {
+    const db = getDb();
+    const d = db.decisions[params.decisionId];
+    if (!d) return problem(404, "Không tìm thấy quyết định", "decision-not-found");
+    if (appealFor(d.decisionId)) return problem(409, "Quyết định này đã được xem xét lại.", "appeal-exists");
+    if (!decisionView(d).appealable) return problem(422, "Quyết định này không thể yêu cầu xem xét lại.", "appeal-not-allowed");
+    const now = new Date();
+    const a: Appeal & { customerRef: string } = {
+      appealId: newId(), referenceNo: `HLB-XL-2026-${String(130 + db.appeals.length).padStart(6, "0")}`, decisionId: d.decisionId, customerRef: d.customerRef, customerMask: `cus_…${d.customerRef.replace("cus_", "").slice(0, 6)}`,
+      partnerId: d.partnerId as never, productType: d.productType, aiOutcome: d.outcome, requestedAmount: money(d.amount), aiAmount: d.approvedAmount, reasonCodes: d.reasonCodes,
+      note: String(body.note ?? ""), channel: "PARTNER_APP", status: "OPEN", createdAt: now.toISOString(), dueAt: twoWorkingDays(now).toISOString(), slaState: "GREEN",
+    };
+    db.appeals = [a, ...db.appeals];
+    webhookLog("notice.requested", d.partnerId, { notice: "N-16", referenceNo: a.referenceNo });
+    return ok({ ...summaryOf(a), message: "Đã gửi yêu cầu xem xét lại. Chuyên viên HLB sẽ trả lời trong vòng 2 ngày làm việc." }, 201);
+  }, { baseDelay: 350 }),
+
+  op("get", "/api/v1/appeals/:appealId", "getAppeal", ({ params }) => {
+    const a = getDb().appeals.find((x) => x.appealId === params.appealId);
+    return a ? ok(summaryOf(a)) : problem(404, "Không tìm thấy yêu cầu", "appeal-not-found");
   }, { log: false, baseDelay: 100 }),
 
   op("post", "/api/v1/contracts", "createContract", ({ body }) => {
     const db = getDb();
     const d = db.decisions[String(body.decisionId)];
-    if (!d || d.outcome !== "APPROVED") return problem(422, "Chỉ tạo hợp đồng cho khoản đã được duyệt", "decision-not-approved");
-    const pkgs = buildPackages(d.productType, d.amount, Number.MAX_SAFE_INTEGER);
+    const principal = d ? effectiveAmount(d) : undefined;
+    if (!d || !principal) return problem(422, "Chỉ tạo hợp đồng cho khoản đã được duyệt", "decision-not-approved");
+    const pkgs = buildPackages(d.productType, principal, Number.MAX_SAFE_INTEGER);
     const p = pkgs.find((x) => x.packageId === body.packageId) ?? pkgs[0];
-    const weekly = d.productType === "DRIVER_INSTANT_LOAN";
-    const schedule = makeSchedule({ months: p.tenorMonths, total: p.totalPayable.amount, paid: 0, weekly });
+    const schedule = makeSchedule({ months: p.tenorMonths, total: p.totalPayable.amount, paid: 0 });
     const id = newId();
-    const eir = eirFor(d.amount, p.totalPayable.amount / p.tenorMonths, p.tenorMonths);
-    const c = { contractId: id, lender: "Hong Leong Bank Vietnam", amount: money(d.amount), tenorMonths: p.tenorMonths, totalPayable: p.totalPayable, eir, schedule, keyFacts: ["Không có phí ẩn"], status: "DRAFT" as const, decisionId: d.decisionId, customerRef: d.customerRef, partnerId: d.partnerId, productType: d.productType, principal: d.amount, packageId: p.packageId };
+    const eir = eirFor(principal, p.totalPayable.amount / p.tenorMonths, p.tenorMonths);
+    const c = { contractId: id, lender: "Hong Leong Bank Vietnam", amount: money(principal), tenorMonths: p.tenorMonths, totalPayable: p.totalPayable, eir, schedule, keyFacts: ["Không có phí ẩn"], status: "DRAFT" as const, decisionId: d.decisionId, customerRef: d.customerRef, partnerId: d.partnerId, productType: d.productType, principal, packageId: p.packageId };
     db.contracts[id] = c;
     return ok(c, 201);
   }, { baseDelay: 300 }),
@@ -247,42 +315,6 @@ export const handlers: HttpHandler[] = [
     return ok({ loanId: l.loanId, newPrincipal: money(newPrincipal), newSchedule: l.schedule.filter((s) => s.status !== "PAID"), pauseUntil: l.pauseUntil, adverseCicReported: false });
   }, { baseDelay: 300 }),
 
-  op("post", "/api/v1/webhooks/payouts", "receivePayoutEvent", ({ body }) => {
-    const l = getDb().loans.find((x) => x.loanId === body.loanId);
-    if (!l) return problem(404, "Không tìm thấy khoản vay", "loan-not-found");
-    const income = Number((body.incomeAmount as { amount: number }).amount);
-    const cur = l.schedule.find((s) => s.status === "DUE" || s.status === "PAUSED");
-    const hist = ((getDb().payouts ??= {})[l.loanId] ??= [3_300_000, 3_400_000]);
-    const drops = [hist.at(-1)!, income].map((v, k, a) => (k === 0 ? false : v < a[k - 1] * 0.5));
-    const prevDrop = hist.length >= 2 && hist.at(-1)! < hist.at(-2)! * 0.5;
-    if (income > 0) hist.push(income);
-    const scaled = income > 0 && drops[1] && prevDrop;
-    let deducted = 0, reason = "Tuần không có thu nhập, không khấu trừ";
-    if (income > 0 && cur) {
-      deducted = Math.min(cur.amount.amount || 170_000, Math.round(income * (scaled ? 0.025 : 0.05)));
-      cur.status = "PAID";
-      reason = scaled ? "Thu nhập giảm hơn 50% hai kỳ liên tiếp. Đã giảm mức khấu trừ một nửa. Nhắc nhở: hãy liên hệ hỗ trợ nếu bạn cần thêm thời gian" : "Đã khấu trừ theo thu nhập tuần";
-    }
-    else if (cur) { cur.status = "PAUSED"; cur.amount = money(0); }
-    const rest = l.schedule.filter((s) => s.status !== "PAID").reduce((a, s) => a + s.amount.amount, 0);
-    l.totalRemaining = money(rest);
-    webhookLog("payout.received", "grab", { loanId: l.loanId, cycleId: body.cycleId, income });
-    return ok({ loanId: l.loanId, cycleId: String(body.cycleId), deducted: money(deducted), reason, remaining: l.totalRemaining });
-  }, { baseDelay: 200 }),
-
-  op("post", "/api/v1/webhooks/settlements", "receiveSettlementEvent", ({ body }) => {
-    const l = getDb().loans.find((x) => x.loanId === body.loanId);
-    if (!l) return problem(404, "Không tìm thấy khoản vay", "loan-not-found");
-    const gross = Number((body.grossAmount as { amount: number }).amount);
-    const share = Math.round(gross * 0.1);
-    const nextMin = l.schedule.find((x) => x.status === "DUE" || x.status === "LATE");
-    if (nextMin) nextMin.dueDate = addDays(new Date(), 60).toISOString().slice(0, 10);
-    l.totalRemaining = money(Math.max(0, l.totalRemaining.amount - share));
-    l.principalRemaining = money(Math.max(0, l.principalRemaining.amount - Math.round(share * 0.9)));
-    webhookLog("settlement.received", "so-ban-hang", { loanId: l.loanId, gross, share });
-    return ok({ loanId: l.loanId, cycleId: String(body.settlementId), deducted: money(share), reason: "Đã trả 10% từ tiền hàng về", remaining: l.totalRemaining });
-  }, { baseDelay: 200 }),
-
   op("get", "/api/v1/customers/:customerRef/graduation-offer", "getGraduationOffer", ({ params }) => {
     const db = getDb();
     const ctx = ctxFor(params.customerRef);
@@ -300,7 +332,7 @@ export const handlers: HttpHandler[] = [
     const page = Number(u.searchParams.get("page") ?? 0), size = Number(u.searchParams.get("size") ?? 50);
     const all = Object.values(getDb().decisions).sort((a, b) => b.decidedAt.localeCompare(a.decidedAt)).filter((d) => (!partner || d.partnerId === partner) && (!outcome || d.outcome === outcome));
     const items: DecisionSummary[] = (getDb().emptyMode ? [] : all).slice(page * size, page * size + size).map((d) => ({
-      decisionId: d.decisionId, customerMask: `cus_…${d.customerRef.replace("cus_", "").slice(0, 6)}`, partnerId: d.partnerId as never, productType: d.productType, amount: money(d.amount), outcome: d.outcome, tier: d.tier, latencyMs: d.latencyMs, decidedAt: d.decidedAt,
+      decisionId: d.decisionId, customerMask: `cus_…${d.customerRef.replace("cus_", "").slice(0, 6)}`, partnerId: d.partnerId as never, productType: d.productType, amount: money(d.amount), outcome: d.outcome, appealStatus: appealFor(d.decisionId)?.status ?? "NONE", latencyMs: d.latencyMs, decidedAt: d.decidedAt,
     }));
     return ok({ items, page, size, totalItems: getDb().emptyMode ? 0 : all.length });
   }, { log: false, baseDelay: 150 }),
@@ -316,27 +348,37 @@ export const handlers: HttpHandler[] = [
     return ok({ weights: w, sources, waterfallOrder, segmentRungMatrix });
   }, { log: false, baseDelay: 120 }),
 
-  op("put", "/api/v1/console/data-sources/ranking", "updateRankingWeights", ({ body }) => {
-    const w = body as unknown as { predictive: number; coverage: number; cost: number; access: number; legal: number };
-    const sum = w.predictive + w.coverage + w.cost + w.access + w.legal;
-    if (Math.abs(sum - 1) > 0.001) return problem(422, "Tổng trọng số phải bằng 100%", "invalid-weights", undefined, [{ field: "weights", message: "Tổng trọng số phải bằng 100%" }]);
-    getDb().weights = w;
-    getDb().audit.unshift({ at: new Date().toISOString(), actor: "operator.demo@hlb", action: "ranking.weights", detail: JSON.stringify(w) });
-    return ok({ weights: w, sources: [] });
-  }, { log: false, baseDelay: 150 }),
+  op("get", "/api/v1/console/appeals", "listAppeals", ({ req }) => {
+    const status = new URL(req.url).searchParams.get("status");
+    const items = (getDb().emptyMode ? [] : getDb().appeals).filter((a) => !status || a.status === status).map((a) => ({ ...a, slaState: slaOf(a) }));
+    return ok(items);
+  }, { log: false, baseDelay: 120 }),
 
-  op("get", "/api/v1/console/manual-queue", "listManualCases", () => ok(getDb().emptyMode ? [] : getDb().manual), { log: false, baseDelay: 120 }),
-
-  op("post", "/api/v1/console/manual-queue/:caseId/resolution", "resolveManualCase", ({ params, body }) => {
+  op("post", "/api/v1/console/appeals/:appealId/decision", "decideAppeal", ({ req, params, body }) => {
     const db = getDb();
-    const m = db.manual.find((x) => x.caseId === params.caseId);
-    if (!m) return problem(404, "Không tìm thấy hồ sơ", "case-not-found");
-    m.status = "RESOLVED";
-    const d = db.decisions[m.decisionId];
-    if (d) { d.outcome = body.action === "APPROVE" ? "APPROVED" : "DECLINED"; d.approvedAmount = body.action === "APPROVE" ? money(d.amount) : undefined; }
-    db.audit.unshift({ at: new Date().toISOString(), actor: "operator.demo@hlb", action: "manual.resolve", detail: `${body.action} ${body.reasonCode}` });
-    return ok(m);
+    const a = db.appeals.find((x) => x.appealId === params.appealId);
+    if (!a) return problem(404, "Không tìm thấy yêu cầu", "appeal-not-found");
+    if (a.status === "UPHELD" || a.status === "OVERTURNED") return problem(409, "Yêu cầu đã được xử lý", "appeal-closed");
+    const outcome = body.outcome as "UPHELD" | "OVERTURNED", reasonCode = String(body.reasonCode ?? "");
+    const amount = Number((body.newOfferAmount as { amount?: number } | undefined)?.amount ?? 0);
+    if (outcome === "OVERTURNED" && amount <= 0) return problem(422, "Nhập số tiền duyệt lại", "invalid-offer", undefined, [{ field: "newOfferAmount", message: "Nhập số tiền duyệt lại" }]);
+    const by = actorOf(req);
+    if (outcome === "OVERTURNED" && amount > REVIEWER_AUTHORITY) {
+      const appr = newApproval("APPEAL_OVERTURN", a.appealId, { appealId: a.appealId, outcome, reasonCode, amount }, `Duyệt lại ${a.referenceNo} vượt thẩm quyền`, by);
+      a.status = "PENDING_SECOND_APPROVAL" as never; a.pendingApprovalId = appr.approvalId;
+      return ok({ ...a, slaState: slaOf(a), approval: appr });
+    }
+    applyAppealOutcome(a, outcome, reasonCode, by, amount);
+    return ok({ ...a, slaState: slaOf(a) });
   }, { log: false, baseDelay: 150 }),
+
+  op("post", "/api/v1/console/appeals/:appealId/information-request", "requestAppealInformation", ({ params, body }) => {
+    const a = getDb().appeals.find((x) => x.appealId === params.appealId);
+    if (!a) return problem(404, "Không tìm thấy yêu cầu", "appeal-not-found");
+    a.status = "INFO_REQUESTED";
+    webhookLog("notice.requested", String(a.partnerId), { notice: "N-16", referenceNo: a.referenceNo, message: body.message });
+    return ok({ ...a, slaState: slaOf(a) });
+  }, { log: false, baseDelay: 120 }),
 
   op("get", "/api/v1/console/learning-loop", "getLearningLoop", () => {
     const db = getDb();
@@ -349,28 +391,89 @@ export const handlers: HttpHandler[] = [
 
   op("get", "/api/v1/console/consent-ledger", "listConsentLedger", () => ok((getDb().emptyMode ? [] : getDb().consents).map((c) => ({ receiptId: c.receiptId, customerMask: `cus_…${c.customerRef.replace("cus_", "")}`, partnerId: c.partnerId, sourceId: c.sourceId, purpose: c.purpose, status: c.status, at: c.withdrawnAt ?? c.grantedAt }))), { log: false, baseDelay: 120 }),
 
-  op("get", "/api/v1/console/tia", "getTiaStatus", () => ok({ status: "FILED", filedAt: "2026-09-30T00:00:00Z", note: "Mô phỏng" }), { log: false, baseDelay: 80 }),
+  op("get", "/api/v1/console/tia", "getTiaStatus", () => ok({ status: "FILED", filedAt: "2026-09-30T00:00:00Z" }), { log: false, baseDelay: 80 }),
 
   op("get", "/api/v1/console/policies", "getPolicy", () => ok(getDb().policy), { log: false, baseDelay: 100 }),
-  op("put", "/api/v1/console/policies", "updatePolicy", ({ body }) => {
-    const p = body as unknown as { dtiCap: number; maxOpenLoans: number };
-    if (p.dtiCap <= 0 || p.dtiCap > 0.6) return problem(422, "Trần DTI phải trong khoảng 0–60%", "invalid-policy", undefined, [{ field: "dtiCap", message: "Trần DTI phải trong khoảng 0–60%" }]);
-    const prevChampion = getDb().policy.championModel;
-    getDb().policy = { ...getDb().policy, ...(body as object) } as never;
-    const promoted = getDb().policy.championModel !== prevChampion;
-    getDb().audit.unshift({ at: new Date().toISOString(), actor: "operator.demo@hlb", action: promoted ? "learning.promote" : "policy.update", detail: promoted ? `champion ${prevChampion} → ${getDb().policy.championModel}` : JSON.stringify(body) });
-    return ok(getDb().policy);
+  // Policy, weights and model changes go through versioned drafts + maker-checker approval (US-63, US-60, US-64; DD-18).
+  op("post", "/api/v1/console/policy-versions", "createPolicyDraft", ({ req, body }) => {
+    const db = getDb();
+    const cfg = (body.config ?? {}) as { weights?: { predictive: number; coverage: number; cost: number; access: number; legal: number }; dtiCap?: number };
+    if (cfg.weights) {
+      const w = cfg.weights; const sum = w.predictive + w.coverage + w.cost + w.access + w.legal;
+      if (Math.abs(sum - 1) > 0.001) return problem(422, "Tổng trọng số phải bằng 100%", "invalid-weights", undefined, [{ field: "weights", message: "Tổng trọng số phải bằng 100%" }]);
+    }
+    if (cfg.dtiCap !== undefined && (cfg.dtiCap <= 0 || cfg.dtiCap > 0.6)) return problem(422, "Trần DTI phải trong khoảng 0–60%", "invalid-policy", undefined, [{ field: "dtiCap", message: "Trần DTI phải trong khoảng 0–60%" }]);
+    const versionNo = (db.drafts?.length ?? 0) + 8;
+    const v = { policyVersionId: newId(), productType: (body.productType as string) ?? "POP_INSTALMENT", versionNo, status: "draft", config: cfg, createdBy: actorOf(req), reason: (body.reason as string) ?? "" };
+    db.drafts = [v, ...(db.drafts ?? [])];
+    return ok(v, 201);
+  }, { log: false, baseDelay: 120 }),
+
+  op("post", "/api/v1/console/policy-versions/:versionId/submit", "submitPolicyVersion", ({ req, params, body }) => {
+    const db = getDb();
+    const v = (db.drafts ?? []).find((d) => d.policyVersionId === params.versionId);
+    if (!v) return problem(404, "Không tìm thấy bản nháp", "draft-not-found");
+    v.status = "pending_approval";
+    return ok(newApproval("POLICY_VERSION", v.policyVersionId, v.config, (body.reason as string) ?? v.reason, actorOf(req)), 201);
+  }, { log: false, baseDelay: 120 }),
+
+  op("post", "/api/v1/console/models/:modelVersionId/mode", "requestModelModeChange", ({ req, params, body }) =>
+    ok(newApproval("MODEL_MODE", params.modelVersionId, { mode: body.mode, modelVersionId: params.modelVersionId }, (body.reason as string) ?? "", actorOf(req)), 201), { log: false, baseDelay: 120 }),
+
+  op("get", "/api/v1/console/approvals", "listApprovals", () => {
+    const items = (getDb().approvals ?? []).filter((a) => a.status === "PENDING");
+    return ok({ items, page: 0, size: 50, totalItems: items.length });
+  }, { log: false, baseDelay: 80 }),
+
+  op("post", "/api/v1/console/approvals/:approvalId/approve", "approveChange", ({ req, params, body }) => {
+    const db = getDb();
+    const a = (db.approvals ?? []).find((x) => x.approvalId === params.approvalId);
+    if (!a) return problem(404, "Không tìm thấy yêu cầu", "approval-not-found");
+    if (a.status !== "PENDING") return problem(409, "Yêu cầu đã được xử lý", "approval-closed");
+    const checker = actorOf(req);
+    if (checker === a.makerId) return problem(403, "Bạn không thể tự duyệt thay đổi của mình.", "own-change");
+    const d = a.diff as { weights?: typeof db.weights; mode?: string; modelVersionId?: string } & Record<string, unknown>;
+    if (a.kind === "APPEAL_OVERTURN") {
+      const ap = db.appeals.find((x) => x.appealId === d.appealId);
+      if (ap) { applyAppealOutcome(ap, "OVERTURNED", String(d.reasonCode), a.makerId, Number(d.amount)); ap.pendingApprovalId = undefined; }
+      db.audit.unshift({ at: new Date().toISOString(), actor: a.makerId, action: "appeal.overturn.approve", detail: `${ap?.referenceNo ?? ""} (duyệt bởi ${checker})` });
+    } else if (a.kind === "MODEL_MODE") {
+      const prev = db.policy.championModel; db.policy = { ...db.policy, championModel: d.modelVersionId } as never;
+      db.audit.unshift({ at: new Date().toISOString(), actor: a.makerId, action: "learning.promote", detail: `champion ${prev} → ${d.modelVersionId} (duyệt bởi ${checker})` });
+    } else if (d.weights) {
+      db.weights = d.weights;
+      db.audit.unshift({ at: new Date().toISOString(), actor: a.makerId, action: "ranking.weights", detail: `${JSON.stringify(d.weights)} (duyệt bởi ${checker})` });
+    } else {
+      db.policy = { ...db.policy, ...d } as never;
+      db.audit.unshift({ at: new Date().toISOString(), actor: a.makerId, action: "policy.update", detail: `${JSON.stringify(d)} (duyệt bởi ${checker})` });
+    }
+    const v = (db.drafts ?? []).find((x) => x.policyVersionId === a.targetId); if (v) v.status = "active";
+    a.status = "APPROVED"; a.comment = (body.comment as string) ?? "";
+    return ok(a);
   }, { log: false, baseDelay: 150 }),
+
+  op("post", "/api/v1/console/approvals/:approvalId/reject", "rejectChange", ({ params, body }) => {
+    const a = (getDb().approvals ?? []).find((x) => x.approvalId === params.approvalId);
+    if (!a) return problem(404, "Không tìm thấy yêu cầu", "approval-not-found");
+    a.status = "REJECTED"; a.comment = (body.comment as string) ?? "";
+    return ok(a);
+  }, { log: false, baseDelay: 120 }),
 
   op("get", "/api/v1/console/partners", "listPartners", () => ok([
     { partnerId: "viettel-money", name: "Viettel Money", products: ["PAYMENT_INSTALLMENT"], webhookUrl: "https://partner.example/webhooks/creditpulse", settlementAccountMask: "••••4821", sandboxKeyMask: "sk_test_••••a1" },
-    { partnerId: "grab", name: "Grab", products: ["DRIVER_INSTANT_LOAN"], webhookUrl: "https://partner.example/webhooks/creditpulse", settlementAccountMask: "••••7733", sandboxKeyMask: "sk_test_••••b2" },
-    { partnerId: "so-ban-hang", name: "Sổ Bán Hàng", products: ["SELLER_FUNDING"], webhookUrl: "https://partner.example/webhooks/creditpulse", settlementAccountMask: "••••9012", sandboxKeyMask: "sk_test_••••c3" },
+    { partnerId: "grab", name: "Grab", products: ["PAYMENT_INSTALLMENT"], webhookUrl: "https://partner.example/webhooks/creditpulse", settlementAccountMask: "••••7733", sandboxKeyMask: "sk_test_••••b2" },
+    { partnerId: "so-ban-hang", name: "Sổ Bán Hàng", products: ["PAYMENT_INSTALLMENT"], webhookUrl: "https://partner.example/webhooks/creditpulse", settlementAccountMask: "••••9012", sandboxKeyMask: "sk_test_••••c3" },
   ]), { log: false, baseDelay: 100 }),
+
+  op("post", "/api/v1/console/partners/:partnerId/credentials", "issuePartnerCredential", ({ params }) => {
+    getDb().audit.unshift({ at: new Date().toISOString(), actor: "integration.demo@hlb", action: "partner.credential.rotate", detail: `${params.partnerId} sandbox` });
+    const rnd = () => Math.random().toString(36).slice(2, 10);
+    return ok({ credentialId: newId(), clientId: `cp_${params.partnerId}_${rnd()}`, clientSecret: `cps_${rnd()}${rnd()}${rnd()}`, oldCredentialValidUntil: addDays(new Date(), 7).toISOString() }, 201);
+  }, { log: false, baseDelay: 200 }),
 
   op("post", "/api/v1/console/partners/:partnerId/test-webhook", "sendTestWebhook", ({ params }) => {
     webhookLog("test.ping", params.partnerId, {});
-    return ok(getDb().calls[0], 202);
+    return ok({ deliveryId: newId(), eventType: "test.ping", status: "delivered", attempts: 1, lastStatusCode: 200, createdAt: new Date().toISOString() }, 202);
   }, { log: false, baseDelay: 200 }),
 
   op("get", "/api/v1/console/api-calls", "listApiCalls", ({ req }) => {

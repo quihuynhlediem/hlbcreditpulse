@@ -6,13 +6,18 @@ import type { SourceId } from "@/api/types";
 import { ConsentSheet } from "@/components/kit/Consent";
 import { LadderView } from "@/components/kit/Ladder";
 import { Btn, Lockup } from "@/components/ui";
-import { VmFrame } from "@/components/vm/VmFrame";
+import { WalletFrame } from "@/components/kit/WalletFrame";
+import { useWallet } from "@/lib/wallet";
 import { vnd } from "@/lib/format";
 import { CUSTOMER_BY_REF, SOURCE_BY_ID } from "@/mocks/fixtures";
 import { useFlow } from "@/store/flow";
+import { lc, useT } from "@/i18n";
 
 /** SCR-26 limit hub (also entry A3): connect one source at a time; every rise names the data that caused it. */
 function Limit() {
+  const w = useWallet();
+  const B = w.base;
+  const t = useT();
   const router = useRouter();
   const q = useSearchParams();
   const offer = q.get("offer");
@@ -27,23 +32,22 @@ function Limit() {
   useEffect(() => {
     if (!data) return;
     const cur = data.currentLimit.amount;
-    if (prev.current !== undefined && cur > prev.current && last.current) setToast(`Hạn mức tăng lên ${vnd(cur)} nhờ ${SOURCE_BY_ID[last.current].name.toLowerCase()}`);
+    if (prev.current !== undefined && cur > prev.current && last.current) setToast(t("Hạn mức tăng lên {0} nhờ {1}", vnd(cur), lc(t(SOURCE_BY_ID[last.current].name))));
     prev.current = cur;
   }, [data]);
-  const partner = "Viettel Money";
   return (
-    <VmFrame scr="SCR-26" title="Hạn mức trả góp HLB" back={() => router.push(offer ? `/viettel-money/offers/${offer}` : "/viettel-money")} footer={<><Lockup />{offer && <Btn onClick={() => router.push(`/viettel-money/offers/${offer}`)}>Quay lại gói trả góp</Btn>}</>}>
+    <WalletFrame scr="SCR-26" title="Hạn mức trả góp HLB" back={() => router.push(offer ? `${B}/offers/${offer}` : `${B}`)} footer={<><Lockup />{offer && <Btn onClick={() => router.push(`${B}/offers/${offer}`)}>{t("Quay lại gói trả góp")}</Btn>}</>}>
       {toast && <div role="status" className="mx-4 mt-3 rounded-xl bg-success/10 p-3 text-[13px] font-semibold text-success" data-testid="limit-toast">{toast}</div>}
-      <LadderView customerRef={persona} ekycDone={hub ? done : undefined} onVerify={() => router.push("/viettel-money/ekyc?next=limit")} onConnect={(s) => setSource(s)} />
+      <LadderView customerRef={persona} ekycDone={hub ? done : undefined} onVerify={() => router.push(`${B}/ekyc?next=limit`)} onConnect={(s) => setSource(s)} />
       {source && (
         <ConsentSheet
-          sourceId={source} customerRef={persona} partnerId="viettel-money" partnerName={partner} stepLabel="Nguồn dữ liệu"
+          sourceId={source} customerRef={persona} partnerId={w.partnerId} partnerName={w.name} stepLabel="Nguồn dữ liệu"
           declineHint={`Không kết nối thì hạn mức giữ ở ${vnd(data?.currentLimit.amount ?? 0)}`}
           onGranted={() => { last.current = source; setSource(null); }}
           onDeclined={() => setSource(null)}
         />
       )}
-    </VmFrame>
+    </WalletFrame>
   );
 }
 export default function Page() { return <Suspense><Limit /></Suspense>; }

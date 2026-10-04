@@ -1,8 +1,8 @@
-import { expect, test } from "@playwright/test";
-import { appAlert, connectNext, openEntry, setScenario, toOffers } from "./helpers";
+import { expect, test } from "./fixtures";
+import { appAlert, connectNext, openAs, openEntry, setScenario, toOffers } from "./helpers";
 
 test.describe("EP-1 Demo frame & partner entry", () => {
-  test("AC-01.1 launcher shows three flows with at least three entry points each", async ({ page }) => {
+  test("DEMO-01.1 launcher shows three flows with at least three entry points each", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByTestId("entry-A1")).toBeVisible();
     for (const f of ["A", "B", "C"]) {
@@ -10,16 +10,16 @@ test.describe("EP-1 Demo frame & partner entry", () => {
       expect(n).toBeGreaterThanOrEqual(3);
     }
   });
-  test("AC-01.2 an entry opens the partner surface with its persona", async ({ page }) => {
+  test("DEMO-01.2 an entry opens the partner surface with its persona", async ({ page }) => {
     await openEntry(page, "A2");
     await expect(page).toHaveURL(/\/viettel-money$/);
     await expect(page.getByTestId("hlb-banner")).toContainText("30.000.000");
   });
-  test("AC-01.3 unknown deep link lands on a clear message", async ({ page }) => {
+  test("DEMO-01.3 unknown deep link lands on a clear message", async ({ page }) => {
     await page.goto("/demo/A/Z9");
     await expect(appAlert(page)).toContainText("Không tìm thấy kịch bản. Chọn một luồng để bắt đầu.");
   });
-  test("AC-01.4 launcher opens the console and the inspector", async ({ page }) => {
+  test("DEMO-01.4 launcher opens the console and the inspector", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "API inspector" }).first().click();
     await expect(page.getByTestId("api-inspector")).toBeVisible();
@@ -27,21 +27,20 @@ test.describe("EP-1 Demo frame & partner entry", () => {
     await page.getByRole("link", { name: "Bảng điều khiển CreditPulse" }).click();
     await expect(page).toHaveURL(/creditpulse\/decisions/);
   });
-  test("AC-02.1 scenario toggle changes the next response", async ({ page }) => {
+  test("DEMO-02.1 scenario toggle changes the next response", async ({ page }) => {
     await page.goto("/");
     await setScenario(page, "Hồ sơ mỏng (hạn mức khởi đầu)");
     await expect(page.getByLabel("Kịch bản")).toHaveValue("THIN_FILE");
   });
-  test("AC-02.2 reset restores seed data and returns to the entry point", async ({ page }) => {
+  test("DEMO-02.2 reset restores seed data and returns to the entry point", async ({ page }) => {
     await openEntry(page, "A1");
-    await page.getByRole("button", { name: "Đặt lại dữ liệu demo" }).click();
+    await page.getByRole("button", { name: "Đặt lại dữ liệu" }).click();
     await expect(page).toHaveURL(/\/shopee\/checkout/);
   });
-  test("AC-02.4 mock badge can be toggled off", async ({ page }) => {
-    await openEntry(page, "A1");
-    await expect(page.getByText("Dữ liệu mô phỏng").first()).toBeVisible();
-    await page.getByLabel("Huy hiệu mô phỏng").uncheck();
-    await expect(page.getByText("Dữ liệu mô phỏng")).toHaveCount(0);
+  test("DEMO-02.4 the persona is read-only and set by the entry point (R-27)", async ({ page }) => {
+    await openEntry(page, "A2");
+    await expect(page.getByTestId("persona")).toHaveAttribute("data-persona", "cus_khoa");
+    await expect(page.locator("select[aria-label='Nhân vật']")).toHaveCount(0);
   });
   test("AC-03.1 checkout offers Viettel Money with the HLB badge", async ({ page }) => {
     await openEntry(page, "A1");
@@ -136,7 +135,7 @@ test.describe("SL-1 critical path: Mai buys on Shopee with Viettel Money", () =>
     await expect(page.getByTestId("decision")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("decision")).toContainText("Đã được duyệt 12.000.000 ₫");
     await expect(page.getByTestId("decision-reason")).toContainText("Ví của bạn có thu nhập đều đặn 12 tháng");
-    await expect(page.getByTestId("decision")).toContainText("Thêm tài khoản lương hdb".replace("hdb", "hlb"));
+    await expect(page.getByTestId("decision")).toContainText("Thêm tài khoản lương HLB");
     await page.getByRole("button", { name: "Tiếp tục ký hợp đồng" }).click();
     // contract
     await expect(page.getByTestId("contract")).toContainText("Hong Leong Bank Vietnam");
@@ -245,19 +244,38 @@ test.describe("EP-4 / EP-5 / EP-6", () => {
     await expect(page.getByRole("button", { name: "Chọn cách thanh toán khác" })).toBeVisible();
     await expect(page.getByTestId("decision")).not.toContainText(/điểm|score/i);
   });
-  test("AC-17.3 / AC-16.3 manual review message when no confident result", async ({ page }) => {
+  test("AC-16.3 / AC-11.2 / AC-17.3 a fraud signal gives a counter-offer, never a pending review, and it can be appealed", async ({ page }) => {
     await openEntry(page, "A1");
-    await setScenario(page, "Xem xét thủ công");
+    await setScenario(page, "Duyệt số tiền thấp hơn (thiết bị dùng chung)");
     await page.goto("/viettel-money/limit");
     await connectNext(page); await connectNext(page);
     await page.goto("/viettel-money/ekyc");
     await page.getByRole("button", { name: "Bắt đầu quét" }).click();
-    await expect(page.getByTestId("decision")).toContainText("Hồ sơ cần xem thêm", { timeout: 20_000 });
-    await expect(page.getByTestId("decision")).toContainText("Chúng tôi sẽ báo kết quả trong vòng 4 giờ làm việc.");
+    const d = page.getByTestId("decision");
+    await expect(d).toHaveAttribute("data-outcome", "COUNTER_OFFER", { timeout: 20_000 });
+    await expect(d).toContainText("Bạn được duyệt");
+    await expect(d).toContainText("Thấp hơn số tiền bạn đề nghị");
+    await expect(page.getByTestId("decision-reason")).toContainText("Thiết bị này được nhiều người dùng để đăng ký vay");
+    await expect(d).not.toContainText(/cần xem thêm|4 giờ/);
+    await expect(page.getByTestId("appeal-open")).toBeVisible();
+  });
+  test("AC-78.1 / AC-78.2 the customer asks for a reassessment once and gets a reference and a 2-working-day reply time", async ({ page }) => {
+    await openEntry(page, "A1");
+    await setScenario(page, "Chưa được duyệt");
+    await page.goto("/viettel-money/limit");
+    await connectNext(page); await connectNext(page);
+    await page.goto("/viettel-money/ekyc");
+    await page.getByRole("button", { name: "Bắt đầu quét" }).click();
+    await expect(page.getByTestId("decision")).toHaveAttribute("data-outcome", "DECLINED", { timeout: 20_000 });
+    await page.getByTestId("appeal-open").click();
+    await page.getByLabel("Ghi chú cho chuyên viên").fill("Tôi có lương ổn định hằng tháng.");
+    await page.getByTestId("appeal-submit").click();
+    await expect(page.getByTestId("appeal-status")).toContainText("Đã gửi yêu cầu xem xét lại. Chuyên viên HLB sẽ trả lời trong vòng 2 ngày làm việc.");
+    await expect(page.getByTestId("appeal-status")).toContainText("HLB-XL-2026-");
+    await expect(page.getByTestId("appeal-open")).toHaveCount(0);
   });
   test("AC-19.2 a fourth open loan is blocked", async ({ page }) => {
-    await openEntry(page, "A1");
-    await page.getByLabel("Nhân vật").selectOption("cus_an");
+    await openAs(page, "A", "A1", "cus_an");
     await page.goto("/viettel-money/ekyc");
     await page.getByRole("button", { name: "Bắt đầu quét" }).click();
     await expect(page.getByTestId("decision")).toContainText("Bạn đang có 3 khoản trả góp. Hoàn tất một khoản để vay thêm.", { timeout: 20_000 });
@@ -265,7 +283,7 @@ test.describe("EP-4 / EP-5 / EP-6", () => {
 });
 
 test.describe("EP-10 inspector", () => {
-  test("AC-33.1 inspector lists calls with method, path, latency and the screen", async ({ page }) => {
+  test("DEMO-33.1 inspector lists calls with method, path, latency and the screen", async ({ page }) => {
     await toOffers(page);
     await page.getByRole("button", { name: "API inspector" }).first().click();
     const call = page.getByTestId("api-call").first();

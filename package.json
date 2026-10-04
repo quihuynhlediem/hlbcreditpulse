@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e": "playwright test",
-    "api:generate": "openapi-typescript openapi/openapi.yaml -o src/api/schema.d.ts",
+    "api:generate": "node scripts/build-contract.mjs && openapi-typescript openapi/openapi.merged.yaml -o src/api/schema.d.ts",
     "api:sync": "bash scripts/sync-openapi.sh",
     "api:check": "node scripts/check-handlers.mjs",
     "format": "prettier --write ."

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test.describe("EP-9 Operator console", () => {
   test("AC-30.1 the log shows masked refs, partner, product, amount, tier, outcome, latency, with filters", async ({ page }) => {
@@ -31,18 +31,33 @@ test.describe("EP-9 Operator console", () => {
     await page.getByLabel("Trọng số Dự báo").fill("50");
     await page.getByLabel("Trọng số Độ phủ").fill("5");
     await expect(page.getByTestId("weight-sum")).toContainText("100%");
-    await page.getByRole("button", { name: "Lưu trọng số" }).click();
+    await page.getByRole("button", { name: "Gửi duyệt trọng số" }).click();
+    await page.getByTestId("approve-as-checker").click();
     await expect(page.getByTestId("weights-saved")).toBeVisible();
     await expect(page.getByTestId("rank-row").first()).not.toContainText("4,10");
     await page.getByRole("button", { name: "Đặt lại mặc định" }).click();
-    await page.getByRole("button", { name: "Lưu trọng số" }).click();
+    await page.getByRole("button", { name: "Gửi duyệt trọng số" }).click();
+    await page.getByTestId("approve-as-checker").click();
     await expect(page.getByTestId("rank-row").first()).toContainText("4,10");
+  });
+
+  test("AC-60.2 the maker cannot approve their own change; a checker can", async ({ page }) => {
+    await page.goto("/creditpulse/ranking");
+    await page.getByLabel("Trọng số Dự báo").fill("50");
+    await page.getByLabel("Trọng số Độ phủ").fill("5");
+    await page.getByRole("button", { name: "Gửi duyệt trọng số" }).click();
+    await expect(page.getByTestId("approval-pending")).toContainText("operator.demo@hlb");
+    await page.getByTestId("approve-as-maker").click();
+    await expect(page.getByTestId("approval-error")).toHaveText("Bạn không thể tự duyệt thay đổi của mình.");
+    await expect(page.getByTestId("rank-row").first()).toContainText("4,10");
+    await page.getByTestId("approve-as-checker").click();
+    await expect(page.getByTestId("weights-saved")).toBeVisible();
   });
 
   test("AC-14.2 weights that do not sum to 100% are rejected", async ({ page }) => {
     await page.goto("/creditpulse/ranking");
     await page.getByLabel("Trọng số Dự báo").fill("40");
-    await page.getByRole("button", { name: "Lưu trọng số" }).click();
+    await page.getByRole("button", { name: "Gửi duyệt trọng số" }).click();
     await expect(page.getByTestId("weights-error")).toHaveText("Tổng trọng số phải bằng 100%");
   });
 
@@ -59,19 +74,35 @@ test.describe("EP-9 Operator console", () => {
     for (const banned of [/danh bạ/i, /vị trí/i, /mạng xã hội/i, /social/i]) await expect(page.getByTestId("ranking-table")).not.toContainText(banned);
   });
 
-  test("AC-18.1 a manual case is approved with a reason code and leaves the queue", async ({ page }) => {
-    await page.goto("/creditpulse/manual");
-    const cases = page.getByTestId("manual-case");
-    await expect(cases.first()).toBeVisible();
-    const n = await cases.count();
-    await expect(cases.first()).toContainText("Gợi ý");
-    await cases.first().getByLabel("Mã lý do").selectOption("INCOME_VERIFIED");
-    await cases.first().getByRole("button", { name: "Duyệt" }).click();
-    await expect.poll(() => cases.count()).toBe(n - 1);
-    await expect(page.getByTestId("resolved-count")).toBeVisible();
+  test("AC-18.1 / AC-18.4 a reviewer overturns an appeal within authority; the AI decision is kept and the outcome is on the appeal", async ({ page }) => {
+    await page.goto("/creditpulse/appeals");
+    const lan = page.locator('[data-testid="appeal"]', { hasText: "cus_…lan" });
+    await expect(lan).toContainText("Tháng trước tôi nghỉ ốm");
+    await lan.getByLabel("Mã lý do").selectOption("NEW_EVIDENCE");
+    await lan.getByLabel("Số tiền duyệt lại").fill("10000000");
+    await lan.getByTestId("appeal-overturn").click();
+    const closed = page.getByTestId("appeals-closed").locator('[data-testid="appeal"]', { hasText: "cus_…lan" });
+    await expect(closed).toContainText("Đã duyệt lại");
+    await expect(closed).toContainText("10.000.000 ₫");
+    await closed.getByRole("link").click();
+    await expect(page.getByTestId("decision-detail")).toContainText("Chưa được duyệt");
+    await expect(page.getByTestId("decision-detail")).toContainText("Đã duyệt lại");
   });
 
-  test("AC-31.1 learning loop shows test band, champion vs challenger, wrongful declines and documentation", async ({ page }) => {
+  test("AC-18.3 / AC-60.2 an overturn above the reviewer's authority waits for a second approver", async ({ page }) => {
+    await page.goto("/creditpulse/appeals");
+    const binh = page.locator('[data-testid="appeal"]', { hasText: "cus_…binh" });
+    await binh.getByLabel("Số tiền duyệt lại").fill("45000000");
+    await expect(binh).toContainText("cần người duyệt thứ hai");
+    await binh.getByTestId("appeal-overturn").click();
+    await expect(binh.getByTestId("approval-pending")).toBeVisible();
+    await binh.getByTestId("approve-as-maker").click();
+    await expect(binh.getByTestId("approval-error")).toHaveText("Bạn không thể tự duyệt thay đổi của mình.");
+    await binh.getByTestId("approve-as-checker").click();
+    await expect(page.getByTestId("appeals-closed")).toContainText("cus_…binh");
+  });
+
+  test("AC-31.2 learning loop shows test band, champion vs challenger, wrongful declines and documentation", async ({ page }) => {
     await page.goto("/creditpulse/learning");
     await expect(page.getByTestId("learning")).toContainText("3%");
     await expect(page.getByTestId("champion")).toContainText("Tỷ lệ duyệt");
@@ -80,9 +111,10 @@ test.describe("EP-9 Operator console", () => {
     await expect(page.getByRole("link", { name: "Xem tài liệu" })).toBeVisible();
   });
 
-  test("AC-31.2 pausing the test band shows the not-enough-data state", async ({ page }) => {
+  test("AC-31.3 pausing the test band (approved by a checker) shows the not-enough-data state", async ({ page }) => {
     await page.goto("/creditpulse/learning");
     await page.getByTestId("pause-band").click();
+    await page.getByTestId("approve-as-checker").click();
     await expect(page.getByTestId("insufficient")).toContainText("Chưa đủ dữ liệu để so sánh mô hình.");
   });
 
@@ -95,26 +127,28 @@ test.describe("EP-9 Operator console", () => {
 
   test("AC-32.2 the TIA register shows the filed status", async ({ page }) => {
     await page.goto("/creditpulse/consent");
-    await expect(page.getByTestId("tia")).toContainText("Đã nộp hồ sơ (mô phỏng)");
+    await expect(page.getByTestId("tia")).toContainText("Đã nộp hồ sơ");
   });
 
-  test("AC-19.4 / AC-34.1 a guardrail edit is saved, logged with who and when, and applies to the next decision", async ({ page }) => {
+  test("AC-63.4 / AC-61.1 an approved guardrail change applies to the next decision and is logged with maker and checker", async ({ page }) => {
     await page.goto("/creditpulse/guardrails");
     await page.getByLabel("Số khoản mở tối đa").fill("4");
-    await page.getByRole("button", { name: "Lưu chính sách" }).click();
+    await page.getByRole("button", { name: "Gửi duyệt chính sách" }).click();
+    await page.getByTestId("approve-as-checker").click();
     await expect(page.getByTestId("policy-msg")).toContainText("áp dụng cho quyết định tiếp theo");
     await expect(page.getByTestId("audit-row").first()).toContainText("operator.demo@hlb");
     await expect(page.getByTestId("audit-row").first()).toContainText("policy.update");
+    await expect(page.getByTestId("audit-row").first()).toContainText("duyệt bởi checker.demo@hlb");
   });
 
-  test("AC-34.1 an out-of-range DTI cap is refused", async ({ page }) => {
+  test("AC-63.3 an out-of-range DTI cap is refused", async ({ page }) => {
     await page.goto("/creditpulse/guardrails");
     await page.getByLabel("Trần DTI").fill("90");
-    await page.getByRole("button", { name: "Lưu chính sách" }).click();
+    await page.getByRole("button", { name: "Gửi duyệt chính sách" }).click();
     await expect(page.getByTestId("policy-msg")).toContainText("Trần DTI phải trong khoảng 0–60%");
   });
 
-  test("AC-09.2 / AC-33.3 partners list products and a test webhook appears in the log with a status", async ({ page }) => {
+  test("AC-33.5 / AC-33.3 partners list products and a test webhook appears in the log with a status", async ({ page }) => {
     await page.goto("/creditpulse/partners");
     await expect(page.getByTestId("partner-row")).toHaveCount(3);
     await page.getByTestId("test-webhook-grab").click();

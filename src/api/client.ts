@@ -1,5 +1,6 @@
 import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./schema";
+import { getLocale } from "@/i18n";
 
 /** Set by each screen so the API inspector can show which screen a call affects. */
 let currentScreen = "";
@@ -15,6 +16,7 @@ const screenHeader: Middleware = {
   onRequest({ request }) {
     if (currentScreen) request.headers.set("x-demo-screen", currentScreen);
     if (currentFlow) request.headers.set("x-demo-flow", currentFlow);
+    request.headers.set("Accept-Language", getLocale());
     return request;
   },
 };
@@ -45,3 +47,6 @@ export async function unwrap<T>(p: Promise<{ data?: T; error?: unknown; response
   }
   return data;
 }
+
+/** A fresh Idempotency-Key per logical write (AC-35.2). Retries of the same mutation must reuse the returned value. */
+export const idem = () => ({ "Idempotency-Key": typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `idem-${Date.now()}-${Math.random().toString(36).slice(2)}` });
