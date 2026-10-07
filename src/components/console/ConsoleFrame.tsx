@@ -5,16 +5,16 @@ import { useScreen, InspectorDrawer } from "@/components/kit/PhoneShell";
 import { DemoChrome } from "@/components/kit/DemoChrome";
 import { Lockup } from "@/components/ui";
 import { cn } from "@/lib/cn";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 export const NAV = [
-  ["Nhật ký quyết định", "/creditpulse/decisions", "SCR-60"],
-  ["Xếp hạng dữ liệu", "/creditpulse/ranking", "SCR-62"],
-  ["Hàng chờ xem xét lại", "/creditpulse/appeals", "SCR-63"],
-  ["Học liên tục", "/creditpulse/learning", "SCR-64"],
-  ["Đồng ý và TIA", "/creditpulse/consent", "SCR-65"],
-  ["Hạn mức và rủi ro", "/creditpulse/guardrails", "SCR-66"],
-  ["Đối tác và webhook", "/creditpulse/partners", "SCR-67"],
+  [tKey("Nhật ký quyết định"), "/creditpulse/decisions", "SCR-60"],
+  [tKey("Xếp hạng dữ liệu"), "/creditpulse/ranking", "SCR-62"],
+  [tKey("Hàng chờ xem xét lại"), "/creditpulse/appeals", "SCR-63"],
+  [tKey("Học liên tục"), "/creditpulse/learning", "SCR-64"],
+  [tKey("Đồng ý và TIA"), "/creditpulse/consent", "SCR-65"],
+  [tKey("Hạn mức và rủi ro"), "/creditpulse/guardrails", "SCR-66"],
+  [tKey("Đối tác và webhook"), "/creditpulse/partners", "SCR-67"],
 ] as const;
 
 /** HLB operator console (internal back-office): desktop layout with side navigation. */

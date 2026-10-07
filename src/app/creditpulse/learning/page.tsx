@@ -5,7 +5,7 @@ import { ApprovalStep } from "@/components/console/ApprovalStep";
 import { ConsoleFrame } from "@/components/console/ConsoleFrame";
 import { Btn, Card, ErrorBox, KV, Skel } from "@/components/ui";
 import { pct } from "@/lib/format";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 
 /** SCR-64 learning loop: randomised test band, champion vs challenger, wrongful-decline estimate. Illustrative values. */
@@ -20,11 +20,11 @@ export default function Learning() {
   const p = policy.data;
   const paused = data ? data.testBandShare === 0 : false;
   return (
-    <ConsoleFrame scr="SCR-64" title="Học liên tục" subtitle="Duyệt ngẫu nhiên một phần nhỏ hồ sơ sát ngưỡng để học và sửa từ chối nhầm. Đổi mô hình hoặc vùng thử nghiệm cần người duyệt khác.">
+    <ConsoleFrame scr="SCR-64" title={tKey("Học liên tục")} subtitle={tKey("Duyệt ngẫu nhiên một phần nhỏ hồ sơ sát ngưỡng để học và sửa từ chối nhầm. Đổi mô hình hoặc vùng thử nghiệm cần người duyệt khác.")}>
       {isError ? <ErrorBox onRetry={() => refetch()}>{t("Không tải được dữ liệu học liên tục.")}</ErrorBox> : isLoading || !data ? <Skel className="h-48" /> : paused ? (
         <Card className="space-y-2" data-testid="insufficient">
           <p className="text-sm">{t("Chưa đủ dữ liệu để so sánh mô hình.")}</p>
-          <Btn className="!w-auto px-4 py-2 text-[13px]" disabled={!p || update.isPending} onClick={() => p && update.mutate({ config: { testBandShare: 0.03 }, reason: "Bật lại vùng thử nghiệm" }, onPending)}>{t("Bật lại vùng thử nghiệm 3%")}</Btn>
+          <Btn className="!w-auto px-4 py-2 text-[13px]" disabled={!p || update.isPending} onClick={() => p && update.mutate({ config: { testBandShare: 0.03 }, reason: tKey("Bật lại vùng thử nghiệm") }, onPending)}>{t("Bật lại vùng thử nghiệm 3%")}</Btn>
         </Card>
       ) : (
         <div className="space-y-4" data-testid="learning">
@@ -34,7 +34,7 @@ export default function Learning() {
             <KV k={t("Tài liệu mô hình")} v={<a href={data.modelDocUrl ?? "#"} className="font-semibold text-primary underline">{t("Xem tài liệu")}</a>} />
           </Card>
           <div className="grid gap-3 sm:grid-cols-2">
-            {([["Mô hình đang chạy (champion)", data.champion, "champion"], ["Mô hình thử nghiệm (challenger)", data.challenger, "challenger"]] as const).map(([title, m, id]) => (
+            {([[tKey("Mô hình đang chạy (champion)"), data.champion, "champion"], [tKey("Mô hình thử nghiệm (challenger)"), data.challenger, "challenger"]] as const).map(([title, m, id]) => (
               <Card key={id} className="space-y-2" data-testid={id}>
                 <h2 className="text-sm font-bold">{t(title)} · {m.name}</h2>
                 <KV k={t("Tỷ lệ duyệt")} v={pct(m.approvalRate)} />
@@ -43,8 +43,8 @@ export default function Learning() {
             ))}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Btn data-testid="promote" className="!w-auto px-4 py-2 text-[13px]" disabled={!p || promote.isPending} onClick={() => promote.mutate({ modelVersionId: data.challenger.name ?? "v2", reason: "Challenger tốt hơn trên vùng thử nghiệm" }, onPending)}>{t("Chuyển {0} lên đang chạy", data.challenger.name ?? "v2")}</Btn>
-            <Btn data-testid="pause-band" variant="secondary" className="!w-auto px-4 py-2 text-[13px]" disabled={!p || update.isPending} onClick={() => p && update.mutate({ config: { testBandShare: 0 }, reason: "Tạm dừng vùng thử nghiệm" }, onPending)}>{t("Tạm dừng vùng thử nghiệm")}</Btn>
+            <Btn data-testid="promote" className="!w-auto px-4 py-2 text-[13px]" disabled={!p || promote.isPending} onClick={() => promote.mutate({ modelVersionId: data.challenger.name ?? "v2", reason: tKey("Challenger tốt hơn trên vùng thử nghiệm") }, onPending)}>{t("Chuyển {0} lên đang chạy", data.challenger.name ?? "v2")}</Btn>
+            <Btn data-testid="pause-band" variant="secondary" className="!w-auto px-4 py-2 text-[13px]" disabled={!p || update.isPending} onClick={() => p && update.mutate({ config: { testBandShare: 0 }, reason: tKey("Tạm dừng vùng thử nghiệm") }, onPending)}>{t("Tạm dừng vùng thử nghiệm")}</Btn>
           </div>
         </div>
       )}

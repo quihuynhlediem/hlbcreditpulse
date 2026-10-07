@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useApproveChange, useSelfApprove } from "@/api/hooks";
 import { ApiError } from "@/api/client";
 import { Btn, Card } from "@/components/ui";
-import { tr, useT } from "@/i18n";
+import { tr, useT, tKey } from "@/i18n";
 
 type Approval = { approvalId: string; kind: string; makerId: string };
 
@@ -19,11 +19,11 @@ export function ApprovalStep({ approval, onApproved }: { approval: Approval; onA
       <p className="text-xs text-muted">{t("Thay đổi chỉ có hiệu lực sau khi một người duyệt khác (Checker) chấp thuận. Mọi bước đều được ghi nhật ký kiểm toán.")}</p>
       <div className="flex flex-wrap gap-2">
         <Btn data-testid="approve-as-checker" className="!w-auto px-4 py-2 text-[13px]" disabled={approve.isPending}
-          onClick={() => { setErr(null); approve.mutate(approval.approvalId, { onSuccess: onApproved, onError: (e) => setErr(e instanceof ApiError ? e.message : "Không duyệt được.") }); }}>
+          onClick={() => { setErr(null); approve.mutate(approval.approvalId, { onSuccess: onApproved, onError: (e) => setErr(e instanceof ApiError ? e.message : tKey("Không duyệt được.")) }); }}>
           {t("Duyệt với vai trò Checker")}
         </Btn>
         <Btn data-testid="approve-as-maker" variant="secondary" className="!w-auto px-4 py-2 text-[13px]" disabled={self.isPending}
-          onClick={() => { setErr(null); self.mutate(approval.approvalId, { onError: (e) => setErr(e instanceof ApiError ? e.message : "Không duyệt được.") }); }}>
+          onClick={() => { setErr(null); self.mutate(approval.approvalId, { onError: (e) => setErr(e instanceof ApiError ? e.message : tKey("Không duyệt được.")) }); }}>
           {t("Tự duyệt (người tạo)")}
         </Btn>
       </div>

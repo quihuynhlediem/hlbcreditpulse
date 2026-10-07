@@ -7,9 +7,9 @@ import { ConsoleFrame, Table } from "@/components/console/ConsoleFrame";
 import { Card, Chip, ErrorBox, KV, Skel } from "@/components/ui";
 import { dec, vnd } from "@/lib/format";
 import { APPEAL_NAMES, OUTCOME_NAMES } from "@/lib/names";
-import { tr, useT } from "@/i18n";
+import { tr, useT, tKey } from "@/i18n";
 
-const STEP_STATUS: Record<string, string> = { QUERIED: "Đã truy vấn", SKIPPED: "Bỏ qua", UNAVAILABLE: "Không khả dụng" };
+const STEP_STATUS: Record<string, string> = { QUERIED: tKey("Đã truy vấn"), SKIPPED: tKey("Bỏ qua"), UNAVAILABLE: tKey("Không khả dụng") };
 const COST_BUDGET = 30_000;
 
 /** SCR-61 decision detail: waterfall, data used per source, ratings, reasons. PII is masked; no score is exposed to customers. */
@@ -21,7 +21,7 @@ export default function DecisionDetail() {
   const cost = (d?.waterfall ?? []).reduce((a, w) => a + (w.status === "QUERIED" ? w.costVnd ?? 0 : 0), 0);
   const copy = async () => { try { await navigator.clipboard.writeText(JSON.stringify(d, null, 2)); setCopied(true); } catch { setCopied(false); } };
   return (
-    <ConsoleFrame scr="SCR-61" title="Chi tiết quyết định" subtitle={decisionId} actions={<>
+    <ConsoleFrame scr="SCR-61" title={tKey("Chi tiết quyết định")} subtitle={decisionId} actions={<>
       <Link href="/creditpulse/decisions" className="rounded-lg border border-line bg-card px-3 py-2 text-[13px] font-semibold">{t("Quay lại nhật ký")}</Link>
       <button onClick={copy} className="rounded-lg bg-primary px-3 py-2 text-[13px] font-semibold text-primary-foreground">{copied ? t("Đã chép") : t("Chép vết API")}</button>
     </>}>
@@ -48,14 +48,14 @@ export default function DecisionDetail() {
             <h2 className="text-sm font-bold">{t("Thác nước dữ liệu")}</h2>
             <p className="text-[13px]" data-testid="cost-per-decision">{t("Chi phí biến đổi của quyết định:")} <span className="font-semibold">{vnd(cost)}</span> {cost < COST_BUDGET ? <Chip tone="success">{t("dưới ngưỡng {0}", vnd(COST_BUDGET))}</Chip> : <Chip tone="warning">{t("vượt ngưỡng {0}", vnd(COST_BUDGET))}</Chip>}</p>
             {d.waterfall.length === 0 ? <p className="text-[13px] text-muted">{t("Không có bước nào được ghi.")}</p> : (
-              <Table testId="waterfall" head={["Thứ tự", "Nguồn", "Trạng thái", "Ghi chú"]}>
+              <Table testId="waterfall" head={[tKey("Thứ tự"), tKey("Nguồn"), tKey("Trạng thái"), tKey("Ghi chú")]}>
                 {d.waterfall.map((w) => <tr key={w.order}><td className="px-3 py-2">{w.order}</td><td className="px-3 py-2 font-semibold">{w.sourceId}</td><td className="px-3 py-2">{t(STEP_STATUS[w.status] ?? w.status)}</td><td className="px-3 py-2 text-muted">{tr(w.stopReason ?? "")}{w.costVnd ? ` ${w.stopReason ? "· " : ""}${vnd(w.costVnd)}` : ""}</td></tr>)}
               </Table>
             )}
           </section>
           <section className="space-y-2">
             <h2 className="text-sm font-bold">{t("Dữ liệu đã dùng")}</h2>
-            <Table testId="sources" head={["Nguồn", "Biến đã đọc", "Đầu ra", "Trọng số", "Hạng", "Chi phí", "Độ trễ"]}>
+            <Table testId="sources" head={[tKey("Nguồn"), tKey("Biến đã đọc"), tKey("Đầu ra"), tKey("Trọng số"), tKey("Hạng"), tKey("Chi phí"), tKey("Độ trễ")]}>
               {d.dataUsed.map((s) => (
                 <tr key={s.sourceId}>
                   <td className="px-3 py-2"><span className="font-semibold">{s.sourceId}</span> {tr(s.name)}</td>

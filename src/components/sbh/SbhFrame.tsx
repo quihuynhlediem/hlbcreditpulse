@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { BottomBar, PhoneShell } from "@/components/kit/PhoneShell";
 import type { FrameProps } from "@/components/grab/GrabFrame";
 import { cn } from "@/lib/cn";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
-const NAV = [["Cửa hàng", "/so-ban-hang", "⌂"], ["Tin nhắn", "/so-ban-hang", "✉"], ["Sổ nợ", "/so-ban-hang", "▤"], ["Thu chi", "/so-ban-hang/report", "⇅"]] as const;
+const NAV = [[tKey("Cửa hàng"), "/so-ban-hang", "⌂"], [tKey("Tin nhắn"), "/so-ban-hang", "✉"], [tKey("Sổ nợ"), "/so-ban-hang", "▤"], [tKey("Thu chi"), "/so-ban-hang/report", "⇅"]] as const;
 
 export function SbhNav({ active }: { active: string }) {
   const t = useT();
@@ -23,7 +23,7 @@ export function SbhNav({ active }: { active: string }) {
 }
 
 /** Green store header from the Sổ Bán Hàng app (S-085): store name, edit link, bell. */
-export function SbhHeader({ title, onBack, store = "Tạp hoá Cô Phụng" }: { title?: string; onBack?: () => void; store?: string }) {
+export function SbhHeader({ title, onBack, store = tKey("Tạp hoá Cô Phụng") }: { title?: string; onBack?: () => void; store?: string }) {
   const t = useT();
   return (
     <div className="shrink-0 bg-primary px-4 pb-3 pt-2 text-primary-foreground">

@@ -10,7 +10,7 @@ import { vndCompact } from "@/lib/format";
 import { useShopperWallet, useOrder } from "@/lib/wallet";
 import { CUSTOMER_BY_REF } from "@/mocks/fixtures";
 import { useFlow } from "@/store/flow";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 const MIN = 1_600_000, MAX = 90_100_000;
 
@@ -55,7 +55,7 @@ function Checkout() {
       <div className="flex flex-1 flex-col gap-2 pb-2">
         <section className="space-y-1 bg-card px-4 py-3.5" aria-label={t("Địa chỉ nhận hàng")}>
           <div className="text-[13px] font-semibold text-primary">{t("Địa chỉ nhận hàng")}</div>
-          <div className="text-sm font-medium">{CUSTOMER_BY_REF[persona]?.fullName ?? "Nguyễn Thị Mai"} &nbsp;|&nbsp; (+84) 90 123 4567</div>
+          <div className="text-sm font-medium">{CUSTOMER_BY_REF[persona]?.fullName ?? tKey("Nguyễn Thị Mai")} &nbsp;|&nbsp; (+84) 90 123 4567</div>
           <div className="text-[13px] text-muted">{t("12 Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. Hồ Chí Minh")}</div>
         </section>
         <section className="space-y-2.5 bg-card px-4 py-3.5" aria-label={t("Sản phẩm")}>
@@ -81,7 +81,7 @@ function Checkout() {
               {eligible && <Lockup />}
             </span>
           </label>
-          {([["cod", "Thanh toán khi nhận hàng"], ["spay", "ShopeePay"]] as const).map(([k, label]) => (
+          {([["cod", tKey("Thanh toán khi nhận hàng")], ["spay", "ShopeePay"]] as const).map(([k, label]) => (
             <label key={k} className="flex items-center gap-3 py-1 text-sm"><input type="radio" name="pm" checked={chosen === k} onChange={() => setMethod(k)} className="accent-[var(--brand)]" />{t(label)}</label>
           ))}
         </section>

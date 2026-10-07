@@ -8,7 +8,7 @@ import { useWallet, useOrder } from "@/lib/wallet";
 import { Btn, Card, ErrorBox, Skel } from "@/components/ui";
 import { vnd } from "@/lib/format";
 import { useFlow } from "@/store/flow";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 /** SCR-21 wallet payment landing: creates the offer set (D-34: still-checking after 3 s, retry after 8 s). */
 export default function PayLanding() {
@@ -32,7 +32,7 @@ export default function PayLanding() {
   useEffect(() => { if (!create.isPending) return; const t = setInterval(() => setSecs((s) => s + 1), 1000); return () => clearInterval(t); }, [create.isPending]);
   const slow = secs >= 3, veryslow = secs >= 8;
   return (
-    <WalletFrame scr="SCR-21" title="Thanh toán trả góp" back={() => router.push("/shopee/checkout")} footer={(create.isError || veryslow) ? <><Btn variant="secondary" onClick={() => { started.current = true; run(); }}>{t("Thử lại")}</Btn><Btn variant="secondary" onClick={() => router.push("/shopee/checkout")}>{t("Chọn cách thanh toán khác")}</Btn></> : undefined}>
+    <WalletFrame scr="SCR-21" title={tKey("Thanh toán trả góp")} back={() => router.push("/shopee/checkout")} footer={(create.isError || veryslow) ? <><Btn variant="secondary" onClick={() => { started.current = true; run(); }}>{t("Thử lại")}</Btn><Btn variant="secondary" onClick={() => router.push("/shopee/checkout")}>{t("Chọn cách thanh toán khác")}</Btn></> : undefined}>
       <div className="flex flex-col gap-3 p-4">
         <Card className="space-y-1">
           <div className="text-xs text-muted">{t("Đơn hàng Shopee")} · {order.shop}</div>

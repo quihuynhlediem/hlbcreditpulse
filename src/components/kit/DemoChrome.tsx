@@ -6,20 +6,20 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useResetDemo, useSetScenario } from "@/api/hooks";
 import type { ScenarioName } from "@/api/types";
 import { track } from "@/api/track";
-import { useLocale, useT, type Locale } from "@/i18n";
+import { useLocale, useT, type Locale, tKey } from "@/i18n";
 import { CUSTOMER_BY_REF } from "@/mocks/fixtures";
 import { useFlow } from "@/store/flow";
 import { usePresenter } from "@/store/presenter";
 
 export const SCENARIO_LABELS: Record<ScenarioName, string> = {
-  APPROVE: "Được duyệt",
-  THIN_FILE: "Hồ sơ mỏng (hạn mức khởi đầu)",
-  NOT_APPROVED: "Chưa được duyệt",
-  COUNTER_OFFER: "Duyệt số tiền thấp hơn (thiết bị dùng chung)",
-  SLOW: "Phản hồi chậm (> 3 giây)",
-  EKYC_FAIL: "Lỗi eKYC",
-  SOURCE_DOWN: "Một nguồn dữ liệu tạm thời không có",
-  SESSION_EXPIRED: "Phiên ký hết hạn",
+  APPROVE: tKey("Được duyệt"),
+  THIN_FILE: tKey("Hồ sơ mỏng (hạn mức khởi đầu)"),
+  NOT_APPROVED: tKey("Chưa được duyệt"),
+  COUNTER_OFFER: tKey("Duyệt số tiền thấp hơn (thiết bị dùng chung)"),
+  SLOW: tKey("Phản hồi chậm (> 3 giây)"),
+  EKYC_FAIL: tKey("Lỗi eKYC"),
+  SOURCE_DOWN: tKey("Một nguồn dữ liệu tạm thời không có"),
+  SESSION_EXPIRED: tKey("Phiên ký hết hạn"),
 };
 
 /**
@@ -39,7 +39,7 @@ export function DemoChrome() {
   const setScenario = useSetScenario();
   const reset = useResetDemo();
   const persona = CUSTOMER_BY_REF[f.persona];
-  const switchTo = (l: Locale) => { if (l === locale) return; setLocale(l); track("language_switched", { locale: l }); qc.invalidateQueries(); };
+  const switchTo = async (l: Locale) => { if (l === locale) return; await setLocale(l); track("language_switched", { locale: l }); qc.invalidateQueries(); };
   return (
     <div className="sticky top-0 z-40 border-b border-slate-300 bg-slate-900 text-slate-100" data-testid="demo-chrome">
       <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2 text-[12px]">

@@ -4,11 +4,11 @@ import type { SourceId } from "@/api/types";
 import { Btn, Card, ErrorBox, Skel } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { vnd } from "@/lib/format";
-import { lc, useT } from "@/i18n";
+import { lc, useT, tKey } from "@/i18n";
 import { SOURCE_BY_ID } from "@/mocks/fixtures";
 
 /** Data-for-limit ladder (SCR-26, R-16): each rung names the data, its priority rank and what it unlocks. */
-export function LadderView({ customerRef, ekycDone, onConnect, onVerify, heroLabel = "Hạn mức hiện tại" }: { customerRef: string; ekycDone?: boolean; onConnect: (s: SourceId) => void; onVerify?: () => void; heroLabel?: string }) {
+export function LadderView({ customerRef, ekycDone, onConnect, onVerify, heroLabel = tKey("Hạn mức hiện tại") }: { customerRef: string; ekycDone?: boolean; onConnect: (s: SourceId) => void; onVerify?: () => void; heroLabel?: string }) {
   const t = useT();
   const { data, isLoading, isError, refetch } = useLimitLadder(customerRef);
   if (isError) return <div className="p-4"><ErrorBox onRetry={() => refetch()}>{t("Chưa thể kết nối lúc này. Dữ liệu của bạn vẫn an toàn.")}</ErrorBox></div>;

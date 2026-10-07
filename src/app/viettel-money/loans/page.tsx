@@ -9,7 +9,7 @@ import { Btn, Card, ErrorBox, KV, Lockup, Skel } from "@/components/ui";
 import { eirText, vnd } from "@/lib/format";
 import { nextDue, paidCount, useProductLoan } from "@/lib/useLoan";
 import { useFlow } from "@/store/flow";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 /** SCR-29 my installment loans: schedule, repay, early-settlement quote, late notice. */
 export default function Loans() {
@@ -25,7 +25,7 @@ export default function Loans() {
   const due = nextDue(loan);
   const late = due && new Date(due.dueDate) < new Date(new Date().toDateString());
   return (
-    <WalletFrame scr="SCR-29" title="Khoản trả góp" back={`${B}`} footer={loan && due ? <><Lockup /><Btn disabled={pay.isPending} onClick={async () => { await pay.mutateAsync({ loanId: loan.loanId, amount: due.amount }); track("repayment_recorded", { loanId: loan.loanId }); }}>{pay.isPending ? t("Đang thanh toán…") : t("Trả ngay")}</Btn><Btn variant="secondary" onClick={() => setQuoteOn(true)}>{t("Xem báo giá tất toán sớm")}</Btn></> : undefined}>
+    <WalletFrame scr="SCR-29" title={tKey("Khoản trả góp")} back={`${B}`} footer={loan && due ? <><Lockup /><Btn disabled={pay.isPending} onClick={async () => { await pay.mutateAsync({ loanId: loan.loanId, amount: due.amount }); track("repayment_recorded", { loanId: loan.loanId }); }}>{pay.isPending ? t("Đang thanh toán…") : t("Trả ngay")}</Btn><Btn variant="secondary" onClick={() => setQuoteOn(true)}>{t("Xem báo giá tất toán sớm")}</Btn></> : undefined}>
       <div className="flex flex-col gap-3 p-4" data-testid="loans">
         {isError && <ErrorBox onRetry={() => refetch()}>{t("Chưa thể kết nối lúc này. Dữ liệu của bạn vẫn an toàn.")}</ErrorBox>}
         {isLoading && <><Skel className="h-24" /><Skel className="h-16" /></>}

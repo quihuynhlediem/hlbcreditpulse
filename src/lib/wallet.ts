@@ -2,7 +2,7 @@
 import { usePathname } from "next/navigation";
 import type { PartnerId } from "@/api/types";
 import { CUSTOMER_BY_REF } from "@/mocks/fixtures";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 import { useFlow } from "@/store/flow";
 
 /**
@@ -19,7 +19,7 @@ export interface Wallet {
 export const WALLETS: Record<PartnerId, Wallet> = {
   "viettel-money": { partnerId: "viettel-money", name: "Viettel Money", base: "/viettel-money" },
   grab: { partnerId: "grab", name: "Grab", base: "/grab" },
-  "so-ban-hang": { partnerId: "so-ban-hang", name: "Sổ Bán Hàng", base: "/so-ban-hang" },
+  "so-ban-hang": { partnerId: "so-ban-hang", name: tKey("Sổ Bán Hàng"), base: "/so-ban-hang" },
 };
 
 /** The wallet whose screens the current route belongs to. */
@@ -40,8 +40,8 @@ export interface OrderItem { orderRef: string; title: string; short: string; sho
 const SHOP = "TechZone Official Store";
 const ITEMS: Record<PartnerId, OrderItem> = {
   "viettel-money": { orderRef: "SPE-2026-0001", title: 'Laptop 14" Ryzen 5 / 16GB / 512GB', short: 'Laptop 14" Ryzen 5', shop: SHOP },
-  grab: { orderRef: "SPE-2026-0001", title: 'Điện thoại di động 6.7" 8GB / 256GB', short: "Điện thoại di động 6.7\"", shop: SHOP },
-  "so-ban-hang": { orderRef: "SPE-2026-0001", title: "Máy in hóa đơn + đầu đọc mã vạch", short: "Máy in hóa đơn + đầu đọc", shop: SHOP },
+  grab: { orderRef: "SPE-2026-0001", title: tKey("Điện thoại di động 6.7\" 8GB / 256GB"), short: tKey("Điện thoại di động 6.7\""), shop: SHOP },
+  "so-ban-hang": { orderRef: "SPE-2026-0001", title: tKey("Máy in hóa đơn + đầu đọc mã vạch"), short: tKey("Máy in hóa đơn + đầu đọc"), shop: SHOP },
 };
 /** What the shopper is buying (it follows the persona so each story reads naturally). */
 export function useOrder(): OrderItem {

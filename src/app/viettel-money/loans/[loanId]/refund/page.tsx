@@ -7,7 +7,7 @@ import { useWallet } from "@/lib/wallet";
 import { Btn, Card, ErrorBox, KV, Skel } from "@/components/ui";
 import { vnd } from "@/lib/format";
 import { useFlow } from "@/store/flow";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 /** SCR-30 refund and dispute status: principal reduced, due date paused up to 30 days, no adverse CIC. */
 function Refund() {
@@ -24,7 +24,7 @@ function Refund() {
   const loan = data?.find((l) => l.loanId === loanId);
   const next = loan?.schedule.find((s) => s.status === "PAUSED" || s.status === "DUE");
   return (
-    <WalletFrame scr="SCR-30" title="Hoàn trả đơn hàng" back={`${B}/loans`} footer={<><Btn onClick={() => router.push(`${B}/loans`)}>{t("Xem lịch trả mới")}</Btn><Btn variant="secondary">{t("Liên hệ hỗ trợ")}</Btn></>}>
+    <WalletFrame scr="SCR-30" title={tKey("Hoàn trả đơn hàng")} back={`${B}/loans`} footer={<><Btn onClick={() => router.push(`${B}/loans`)}>{t("Xem lịch trả mới")}</Btn><Btn variant="secondary">{t("Liên hệ hỗ trợ")}</Btn></>}>
       <div className="flex flex-col gap-3 p-4" data-testid="refund-status">
         {isError && <ErrorBox onRetry={() => refetch()}>{t("Chưa cập nhật được. Chúng tôi sẽ thử lại và báo bạn.")}</ErrorBox>}
         {isLoading && <Skel className="h-24" />}

@@ -2,7 +2,7 @@
 import { HlbWalletCards } from "@/components/kit/HlbWalletCards";
 import { GrabFrame } from "@/components/grab/GrabFrame";
 import { Card } from "@/components/ui";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 import { dec, vnd } from "@/lib/format";
 import { CUSTOMER_BY_REF } from "@/mocks/fixtures";
 import { useFlow } from "@/store/flow";
@@ -11,9 +11,9 @@ import { useFlow } from "@/store/flow";
 export default function GrabHome() {
   const t = useT();
   const { persona } = useFlow();
-  const name = (CUSTOMER_BY_REF[persona]?.name ?? "Hùng").replace(/ \(.*\)/, "");
+  const name = (CUSTOMER_BY_REF[persona]?.name ?? tKey("Hùng")).replace(/ \(.*\)/, "");
   return (
-    <GrabFrame scr="SCR-40" nav="Trang chủ">
+    <GrabFrame scr="SCR-40" nav={tKey("Trang chủ")}>
       <div className="bg-primary px-4 pb-5 pt-3 text-primary-foreground">
         <div className="text-xs">{t("Xin chào, {0}", t(name))}</div>
         <div className="mt-1 flex items-end justify-between">
@@ -23,13 +23,13 @@ export default function GrabHome() {
       </div>
       <div className="-mt-3 flex flex-col gap-3 px-4 pb-4">
         <Card className="grid grid-cols-3 gap-2 text-center text-xs">
-          {[["Đơn hôm nay", "9"], ["Tỷ lệ nhận", "94%"], ["Đánh giá", `${dec(4.9, 1)} ★`]].map(([k, v]) => <div key={k}><div className="text-base font-bold">{v}</div><div className="text-muted">{t(k)}</div></div>)}
+          {[[tKey("Đơn hôm nay"), "9"], [tKey("Tỷ lệ nhận"), "94%"], [tKey("Đánh giá"), `${dec(4.9, 1)} ★`]].map(([k, v]) => <div key={k}><div className="text-base font-bold">{v}</div><div className="text-muted">{t(k)}</div></div>)}
         </Card>
         <HlbWalletCards />
         <Card className="space-y-1.5">
           <div className="text-[13px] font-semibold">{t("Dịch vụ cho đối tác")}</div>
           <div className="grid grid-cols-4 gap-2 text-center text-[11px]">
-            {["Bảo hiểm", "Đồng phục", "Xăng dầu", "Hỗ trợ"].map((s) => <div key={s} className="rounded-xl bg-page p-2"><div className="mx-auto mb-1 h-6 w-6 rounded-full bg-primary-soft" />{t(s)}</div>)}
+            {[tKey("Bảo hiểm"), tKey("Đồng phục"), tKey("Xăng dầu"), tKey("Hỗ trợ")].map((s) => <div key={s} className="rounded-xl bg-page p-2"><div className="mx-auto mb-1 h-6 w-6 rounded-full bg-primary-soft" />{t(s)}</div>)}
           </div>
         </Card>
       </div>

@@ -6,7 +6,7 @@ import { useWallet } from "@/lib/wallet";
 import { Btn, Card, Chip, ErrorBox, Skel } from "@/components/ui";
 import { SOURCE_BY_ID } from "@/mocks/fixtures";
 import { useFlow } from "@/store/flow";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 /** SCR-32 privacy and data settings: sources, receipts, withdraw. Withdrawal never changes an existing loan. */
 export default function Privacy() {
@@ -20,7 +20,7 @@ export default function Privacy() {
   const active = data?.filter((c) => c.status === "GRANTED") ?? [];
   const history = data?.filter((c) => c.status === "WITHDRAWN") ?? [];
   return (
-    <WalletFrame scr="SCR-32" title="Quyền riêng tư và dữ liệu" back={`${B}`} nav="account">
+    <WalletFrame scr="SCR-32" title={tKey("Quyền riêng tư và dữ liệu")} back={`${B}`} nav="account">
       <div className="flex flex-col gap-3 p-4" data-testid="privacy">
         {msg && <div role="status" className="rounded-xl bg-success/10 p-3 text-[13px] font-semibold text-success">{t(msg)}</div>}
         {isError && <ErrorBox onRetry={() => refetch()}>{t("Chưa tắt được chia sẻ. Thử lại.")}</ErrorBox>}
@@ -30,7 +30,7 @@ export default function Privacy() {
           <Card key={c.receiptId} className="space-y-2" data-testid="consent-row">
             <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">{t(SOURCE_BY_ID[c.sourceId].name)}</h2><Chip tone="success">{t("Đang chia sẻ")}</Chip></div>
             <p className="text-[11px] text-muted">{t("Mã đồng ý: {0}…", c.receiptId.slice(0, 8))}</p>
-            <Btn variant="secondary" disabled={withdraw.isPending} onClick={async () => { await withdraw.mutateAsync(c.receiptId); setMsg("Đã dừng chia sẻ. Dữ liệu sẽ không dùng cho lần xét sau."); }}>{t("Rút lại")}</Btn>
+            <Btn variant="secondary" disabled={withdraw.isPending} onClick={async () => { await withdraw.mutateAsync(c.receiptId); setMsg(tKey("Đã dừng chia sẻ. Dữ liệu sẽ không dùng cho lần xét sau.")); }}>{t("Rút lại")}</Btn>
           </Card>
         ))}
         {history.map((c) => <Card key={c.receiptId} tone="outline" className="flex items-center justify-between text-[13px]"><span>{t(SOURCE_BY_ID[c.sourceId].name)}</span><Chip tone="muted">{t("Đã rút lại")}</Chip></Card>)}

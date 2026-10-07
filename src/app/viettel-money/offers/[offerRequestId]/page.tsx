@@ -10,7 +10,7 @@ import { Btn, Card, Chip, ErrorBox, KV, Lockup, Skel } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { eirText, vnd } from "@/lib/format";
 import { useFlow } from "@/store/flow";
-import { tr, useT } from "@/i18n";
+import { tr, useT, tKey } from "@/i18n";
 
 function CostSheet({ pkg, principal, onClose }: { pkg: Package; principal: number; onClose: () => void }) {
   const t = useT();
@@ -54,7 +54,7 @@ export default function Offers() {
 
   return (
     <WalletFrame
-      scr="SCR-22" title="Chọn gói trả góp" back={() => router.push("/shopee/checkout")}
+      scr="SCR-22" title={tKey("Chọn gói trả góp")} back={() => router.push("/shopee/checkout")}
       footer={
         <>
           <Lockup />

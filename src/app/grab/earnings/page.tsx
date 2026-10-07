@@ -3,9 +3,9 @@ import { useRouter } from "next/navigation";
 import { GrabFrame } from "@/components/grab/GrabFrame";
 import { Card } from "@/components/ui";
 import { vnd } from "@/lib/format";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
-const WEEKS = [["T-3", 3_100_000], ["T-2", 3_450_000], ["T-1", 3_300_000], ["Tuần này", 3_700_000]] as const;
+const WEEKS = [[tKey("T-3"), 3_100_000], [tKey("T-2"), 3_450_000], [tKey("T-1"), 3_300_000], [tKey("Tuần này"), 3_700_000]] as const;
 
 /** SCR-41 driver earnings: weekly payouts, trend and the eligibility banner. */
 export default function Earnings() {
@@ -13,7 +13,7 @@ export default function Earnings() {
   const router = useRouter();
   const max = Math.max(...WEEKS.map((w) => w[1]));
   return (
-    <GrabFrame scr="SCR-41" title="Thu nhập" back={() => router.push("/grab")} nav="Thu nhập">
+    <GrabFrame scr="SCR-41" title={tKey("Thu nhập")} back={() => router.push("/grab")} nav={tKey("Thu nhập")}>
       <div className="flex flex-col gap-3 p-4">
         <Card className="space-y-3">
           <div className="text-xs text-muted">{t("Thu nhập 4 tuần gần nhất")}</div>
@@ -29,7 +29,7 @@ export default function Earnings() {
         </Card>
         <Card className="space-y-2">
           <div className="text-[13px] font-semibold">{t("Lần nhận tiền gần đây")}</div>
-          {([["Thứ Hai", 1_020_000], ["Thứ Hai tuần trước", 880_000], ["Thứ Hai 2 tuần trước", 1_150_000]] as const).map(([d, v]) => <div key={d} className="flex justify-between text-[13px]"><span className="text-muted">{t(d)}</span><span className="font-semibold">{vnd(v)}</span></div>)}
+          {([[tKey("Thứ Hai"), 1_020_000], [tKey("Thứ Hai tuần trước"), 880_000], [tKey("Thứ Hai 2 tuần trước"), 1_150_000]] as const).map(([d, v]) => <div key={d} className="flex justify-between text-[13px]"><span className="text-muted">{t(d)}</span><span className="font-semibold">{vnd(v)}</span></div>)}
         </Card>
       </div>
     </GrabFrame>

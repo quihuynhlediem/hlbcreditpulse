@@ -7,7 +7,7 @@ import { useWallet } from "@/lib/wallet";
 import { Btn, Card, ErrorBox, Lockup, Skel } from "@/components/ui";
 import { vnd } from "@/lib/format";
 import { useFlow } from "@/store/flow";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 /** SCR-31 graduation: higher limit, HLB card via the wallet, merchant-led referral only (no cash reward, D-11, D-31). */
 export default function Graduation() {
@@ -19,7 +19,7 @@ export default function Graduation() {
   const { data, isLoading, isError, refetch } = useGraduation(persona);
   const has = data && data.newLimit.amount > 0;
   return (
-    <WalletFrame scr="SCR-31" title="Ưu đãi dành cho bạn" back={`${B}`} footer={has ? <><Lockup /><Btn onClick={() => { track("graduation_accepted", { limit: data!.newLimit.amount }); router.push(`${B}/limit?from=hub`); }}>{t("Nâng hạn mức")}</Btn><Btn variant="secondary" onClick={() => router.push(`${B}`)}>{t("Để sau")}</Btn></> : undefined}>
+    <WalletFrame scr="SCR-31" title={tKey("Ưu đãi dành cho bạn")} back={`${B}`} footer={has ? <><Lockup /><Btn onClick={() => { track("graduation_accepted", { limit: data!.newLimit.amount }); router.push(`${B}/limit?from=hub`); }}>{t("Nâng hạn mức")}</Btn><Btn variant="secondary" onClick={() => router.push(`${B}`)}>{t("Để sau")}</Btn></> : undefined}>
       <div className="flex flex-col gap-3 p-4" data-testid="graduation">
         {isError && <ErrorBox onRetry={() => refetch()}>{t("Chưa thể kết nối lúc này.")}</ErrorBox>}
         {isLoading && <Skel className="h-24" />}

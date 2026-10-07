@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useCreateEkyc } from "@/api/hooks";
 import { track } from "@/api/track";
 import { Btn, ErrorBox, Lockup } from "@/components/ui";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 import { BottomBar } from "./PhoneShell";
 
 type Phase = "idle" | "reading" | "matching" | "passed";
@@ -11,7 +11,7 @@ type Phase = "idle" | "reading" | "matching" | "passed";
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** NFC chip + face match (simulated, F-05). 3 chip failures open the capture fallback; 3 face failures offer another payment method. */
-export function EkycFlow({ customerRef, onPassed, onCancel, cancelLabel = "Chọn cách thanh toán khác" }: { customerRef: string; onPassed: () => void; onCancel: () => void; cancelLabel?: string }) {
+export function EkycFlow({ customerRef, onPassed, onCancel, cancelLabel = tKey("Chọn cách thanh toán khác") }: { customerRef: string; onPassed: () => void; onCancel: () => void; cancelLabel?: string }) {
   const t = useT();
   const ekyc = useCreateEkyc();
   const [phase, setPhase] = useState<Phase>("idle");
@@ -40,16 +40,16 @@ export function EkycFlow({ customerRef, onPassed, onCancel, cancelLabel = "Chọ
       if (method === "NFC_CHIP") {
         const n = chipFails + 1;
         setChipFails(n);
-        if (n >= 3) { setFallback(true); setMsg("Điện thoại chưa đọc được chip CCCD. Bạn có thể thử lại hoặc chụp CCCD và quét khuôn mặt."); }
-        else setMsg("Chưa đọc được chip. Đặt thẻ sát mặt sau điện thoại và giữ yên.");
+        if (n >= 3) { setFallback(true); setMsg(tKey("Điện thoại chưa đọc được chip CCCD. Bạn có thể thử lại hoặc chụp CCCD và quét khuôn mặt.")); }
+        else setMsg(tKey("Chưa đọc được chip. Đặt thẻ sát mặt sau điện thoại và giữ yên."));
       } else {
         const n = faceFails + 1;
         setFaceFails(n);
-        setMsg("Chưa khớp khuôn mặt. Bạn hãy thử lại ở nơi đủ sáng.");
+        setMsg(tKey("Chưa khớp khuôn mặt. Bạn hãy thử lại ở nơi đủ sáng."));
       }
     } catch {
       setPhase("idle");
-      setMsg("Chưa thể kết nối lúc này. Dữ liệu của bạn vẫn an toàn.");
+      setMsg(tKey("Chưa thể kết nối lúc này. Dữ liệu của bạn vẫn an toàn."));
     }
   }
 
@@ -57,7 +57,7 @@ export function EkycFlow({ customerRef, onPassed, onCancel, cancelLabel = "Chọ
     { label: t("Đọc chip CCCD"), done: phase === "matching" || phase === "passed" },
     { label: t("So khớp khuôn mặt"), done: phase === "passed" },
   ];
-  const title = t(phase === "reading" ? "Đang đọc chip CCCD…" : phase === "matching" ? "Đang so khớp khuôn mặt…" : phase === "passed" ? "Đã xác thực danh tính" : fallback ? "Chụp CCCD và quét khuôn mặt" : "Đặt CCCD gắn chip sát mặt sau điện thoại");
+  const title = t(phase === "reading" ? tKey("Đang đọc chip CCCD…") : phase === "matching" ? tKey("Đang so khớp khuôn mặt…") : phase === "passed" ? tKey("Đã xác thực danh tính") : fallback ? tKey("Chụp CCCD và quét khuôn mặt") : tKey("Đặt CCCD gắn chip sát mặt sau điện thoại"));
   return (
     <>
       <div className="flex flex-1 flex-col items-center gap-4 p-5" data-testid="ekyc">

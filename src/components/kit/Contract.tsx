@@ -9,7 +9,7 @@ import { eirText, vnd } from "@/lib/format";
 import { SOURCE_BY_ID } from "@/mocks/fixtures";
 import { useDecision } from "@/api/hooks";
 import { BottomBar } from "./PhoneShell";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 /** Contract and e-sign (SCR-28, 45, 56): HLB contract key facts, consents recap, OTP. */
 export function ContractView({ decisionId, packageId, borrowerNote, extraFacts = [], onSigned, onCancel }: { decisionId: string; packageId?: string; borrowerNote?: string; extraFacts?: [string, string][]; onSigned: (loan: Loan) => void; onCancel: () => void }) {
@@ -86,7 +86,7 @@ export function ContractView({ decisionId, packageId, borrowerNote, extraFacts =
               const n = fails + 1;
               setFails(n);
               setOtp("");
-              setErr(n >= 3 ? "Mã OTP chưa đúng. Bạn đã hết lượt thử." : "Mã OTP chưa đúng. Vui lòng nhập lại.");
+              setErr(n >= 3 ? tKey("Mã OTP chưa đúng. Bạn đã hết lượt thử.") : tKey("Mã OTP chưa đúng. Vui lòng nhập lại."));
             }
           }}
         >

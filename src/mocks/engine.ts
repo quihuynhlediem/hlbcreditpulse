@@ -4,6 +4,7 @@
  */
 import type { Decision, LadderRung, LimitLadder, Money, NextRung, OfferSet, Package, ProductType, ScenarioName, SourceId, SourceUse, WaterfallStep } from "@/api/types";
 import { CUSTOMER_BY_REF, SOURCE_BY_ID, SOURCES, type CustomerFixture, type RungDef } from "./fixtures";
+import { tKey } from "@/i18n";
 
 export const money = (amount: number): Money => ({ amount: Math.round(amount), currency: "VND" });
 export const RANGE = { min: 1_600_000, max: 90_100_000 };
@@ -42,7 +43,7 @@ export function buildPackages(product: ProductType, amount: number, limit: numbe
       eir: eirFor(amount, total / t.months, t.months),
       interestPayer: t.merchantPays ? "MERCHANT" : "CUSTOMER",
       available,
-      ...(available ? {} : { disabledReason: "Vượt hạn mức hiện tại — Mở khóa thêm" }),
+      ...(available ? {} : { disabledReason: tKey("Vượt hạn mức hiện tại — Mở khóa thêm") }),
     } as Package;
   });
 }
@@ -71,18 +72,18 @@ export function rungReached(ctx: Ctx): RungDef {
 }
 
 const VARIABLES: Partial<Record<SourceId, string[]>> = {
-  "B-01": ["CCCD gắn chip hợp lệ", "Khớp khuôn mặt"],
-  "B-02": ["Số khoản vay hiện có", "Lịch sử nợ quá hạn"],
-  "AD-01": ["Số tháng dùng ví", "Nạp/rút đều đặn", "Dòng tiền trung bình"],
-  "AD-02": ["Thiết bị nhất quán", "Số người dùng chung thiết bị"],
-  "AD-03": ["Lương về đều hằng tháng", "Số tháng nhận lương"],
-  "AD-04": ["Nhịp nạp tiền", "Thời gian dùng ví"],
-  "AD-05": ["Hóa đơn điện nước đã trả", "Tỷ lệ trả đúng hạn"],
-  "AD-06": ["Dòng tiền ngân hàng khác"],
-  "AD-07": ["Thu nhập theo kỳ", "Số ngày hoạt động", "Thời gian làm đối tác"],
-  "AD-08": ["Doanh số theo ngày", "Số đơn", "Tỷ lệ hoàn trả", "Tiền hàng về"],
-  "AD-09": ["Trả nợ đúng hạn tại HLB"],
-  "AD-10": ["Độ ổn định số điện thoại"],
+  "B-01": [tKey("CCCD gắn chip hợp lệ"), tKey("Khớp khuôn mặt")],
+  "B-02": [tKey("Số khoản vay hiện có"), tKey("Lịch sử nợ quá hạn")],
+  "AD-01": [tKey("Số tháng dùng ví"), tKey("Nạp/rút đều đặn"), tKey("Dòng tiền trung bình")],
+  "AD-02": [tKey("Thiết bị nhất quán"), tKey("Số người dùng chung thiết bị")],
+  "AD-03": [tKey("Lương về đều hằng tháng"), tKey("Số tháng nhận lương")],
+  "AD-04": [tKey("Nhịp nạp tiền"), tKey("Thời gian dùng ví")],
+  "AD-05": [tKey("Hóa đơn điện nước đã trả"), tKey("Tỷ lệ trả đúng hạn")],
+  "AD-06": [tKey("Dòng tiền ngân hàng khác")],
+  "AD-07": [tKey("Thu nhập theo kỳ"), tKey("Số ngày hoạt động"), tKey("Thời gian làm đối tác")],
+  "AD-08": [tKey("Doanh số theo ngày"), tKey("Số đơn"), tKey("Tỷ lệ hoàn trả"), tKey("Tiền hàng về")],
+  "AD-09": [tKey("Trả nợ đúng hạn tại HLB")],
+  "AD-10": [tKey("Độ ổn định số điện thoại")],
 };
 const sourceUse = (id: SourceId, connected: boolean, role?: string): SourceUse => {
   const d = SOURCE_BY_ID[id];
@@ -123,7 +124,7 @@ export function ladderFor(ctx: Ctx): LimitLadder {
     reached: d.rung <= cur.rung,
     unlocksText: d.text,
     sources: d.sources.map((s) =>
-      sourceUse(s, usable(ctx, s), ctx.insufficient.has(s) ? "Chưa đủ dữ liệu — quay lại sau 45 ngày" : undefined),
+      sourceUse(s, usable(ctx, s), ctx.insufficient.has(s) ? tKey("Chưa đủ dữ liệu — quay lại sau 45 ngày") : undefined),
     ),
   }));
   return {
@@ -154,9 +155,9 @@ export function offerSetFor(ctx: Ctx, product: ProductType, amount: number, id: 
     packages: buildPackages(product, amount, limit),
     reasonCodes: amount > limit ? ["LIMIT_SHORT"] : [],
     nextRung: next,
-    explanationText: amount > limit ? "Đơn hàng vượt hạn mức hiện tại. Kết nối thêm dữ liệu để tăng hạn mức." : undefined,
+    explanationText: amount > limit ? tKey("Đơn hàng vượt hạn mức hiện tại. Kết nối thêm dữ liệu để tăng hạn mức.") : undefined,
     expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
-    lockup: "Được cung cấp bởi Hong Leong Bank",
+    lockup: tKey("Được cung cấp bởi Hong Leong Bank"),
   };
 }
 
@@ -192,15 +193,15 @@ export function assess(i: AssessInput): Omit<Decision, "decisionId" | "decidedAt
     const def = SOURCE_BY_ID[id];
     const isUsed = id === "AD-02" || (ctx.connected.has(id) && !ctx.insufficient.has(id));
     order += 1;
-    if (id === down) { waterfall.push({ order, sourceId: id, status: "UNAVAILABLE", stopReason: "nguồn tạm thời không có" }); continue; }
+    if (id === down) { waterfall.push({ order, sourceId: id, status: "UNAVAILABLE", stopReason: tKey("nguồn tạm thời không có") }); continue; }
     if (stopped || !isUsed) {
-      waterfall.push({ order, sourceId: id, status: "SKIPPED", stopReason: stopped ? "Bỏ qua (đã đủ tự tin)" : "Bỏ qua (chưa cần)" });
+      waterfall.push({ order, sourceId: id, status: "SKIPPED", stopReason: stopped ? tKey("Bỏ qua (đã đủ tự tin)") : tKey("Bỏ qua (chưa cần)") });
       continue;
     }
     latency += def.latencyMs;
     const rest = ORDER.slice(ORDER.indexOf(id) + 1).filter((s) => ctx.connected.has(s) && !ctx.insufficient.has(s));
     const confident = limit >= i.amount && rest.length === 0;
-    waterfall.push({ order, sourceId: id, status: "QUERIED", costVnd: def.costVnd, latencyMs: def.latencyMs, ...(confident ? { stopReason: "Đủ tự tin" } : {}) });
+    waterfall.push({ order, sourceId: id, status: "QUERIED", costVnd: def.costVnd, latencyMs: def.latencyMs, ...(confident ? { stopReason: tKey("Đủ tự tin") } : {}) });
     if (confident) stopped = true;
   }
   const dataUsed: SourceUse[] = [...ctx.connected]
@@ -217,36 +218,37 @@ export function assess(i: AssessInput): Omit<Decision, "decisionId" | "decidedAt
   const counter = (amount: number, codes: string[], text: string) => ({ ...base, ...appeal, outcome: "COUNTER_OFFER" as const, approvedAmount: money(amount), tenorMonths: tenor, reasonCodes: codes, explanationText: text, retryAfter });
 
   if (i.openLoans >= i.maxOpenLoans) {
-    return { ...base, ...appeal, outcome: "DECLINED", reasonCodes: ["STACKING_LIMIT"], explanationText: `Bạn đang có ${i.openLoans} khoản trả góp. Hoàn tất một khoản để vay thêm.`, retryAfter };
+    return { ...base, ...appeal, outcome: "DECLINED", reasonCodes: ["STACKING_LIMIT"], explanationText: tKey("Bạn đang có {0} khoản trả góp. Hoàn tất một khoản để vay thêm.", i.openLoans), retryAfter };
   }
   if (ctx.scenario === "NOT_APPROVED") {
-    return { ...base, ...appeal, outcome: "DECLINED", reasonCodes: ["INCOME_LOW"], explanationText: "Thu nhập ước tính chưa đủ so với khoản trả hằng tháng.", retryAfter };
+    return { ...base, ...appeal, outcome: "DECLINED", reasonCodes: ["INCOME_LOW"], explanationText: tKey("Thu nhập ước tính chưa đủ so với khoản trả hằng tháng."), retryAfter };
   }
   if (ctx.scenario === "COUNTER_OFFER") {
     // Fraud signal: the device was used by several applicants in 24 h; the engine caps the amount instead of referring (AC-11.2).
     const capped = Math.max(minAmount, floor100k(Math.min(limit, i.amount) * 0.6));
-    return counter(capped, ["DEVICE_SHARED"], "Thiết bị này được nhiều người dùng để đăng ký vay, nên số tiền được duyệt thấp hơn đề nghị.");
+    return counter(capped, ["DEVICE_SHARED"], tKey("Thiết bị này được nhiều người dùng để đăng ký vay, nên số tiền được duyệt thấp hơn đề nghị."));
   }
   if (i.amount > limit) {
-    if (limit >= minAmount) return counter(limit, ["LIMIT_EXCEEDED"], "Số tiền đề nghị vượt hạn mức hiện tại. HLB duyệt trong hạn mức của bạn.");
-    return { ...base, ...appeal, outcome: "DECLINED", reasonCodes: ["LIMIT_EXCEEDED"], explanationText: "Số tiền vượt hạn mức hiện tại. Bạn có thể chọn gói nhỏ hơn hoặc kết nối thêm dữ liệu.", retryAfter };
+    if (limit >= minAmount) return counter(limit, ["LIMIT_EXCEEDED"], tKey("Số tiền đề nghị vượt hạn mức hiện tại. HLB duyệt trong hạn mức của bạn."));
+    return { ...base, ...appeal, outcome: "DECLINED", reasonCodes: ["LIMIT_EXCEEDED"], explanationText: tKey("Số tiền vượt hạn mức hiện tại. Bạn có thể chọn gói nhỏ hơn hoặc kết nối thêm dữ liệu."), retryAfter };
   }
   if (af > 0 && monthly > af) {
     const fit = floor100k((i.amount * af) / monthly);
-    if (fit >= minAmount) return counter(fit, ["AFFORDABILITY"], "Khoản trả hằng tháng vượt khả năng chi trả ước tính. HLB duyệt số tiền phù hợp với thu nhập của bạn.");
-    return { ...base, ...appeal, outcome: "DECLINED", reasonCodes: ["AFFORDABILITY"], explanationText: "Khoản trả hằng tháng vượt khả năng chi trả ước tính (mức trần DTI).", retryAfter };
+    if (fit >= minAmount) return counter(fit, ["AFFORDABILITY"], tKey("Khoản trả hằng tháng vượt khả năng chi trả ước tính. HLB duyệt số tiền phù hợp với thu nhập của bạn."));
+    return { ...base, ...appeal, outcome: "DECLINED", reasonCodes: ["AFFORDABILITY"], explanationText: tKey("Khoản trả hằng tháng vượt khả năng chi trả ước tính (mức trần DTI)."), retryAfter };
   }
   const why: Record<string, string> = {
-    "AD-01": "ví của bạn có thu nhập đều đặn 12 tháng",
-    "AD-05": "hóa đơn điện nước trả đúng hạn",
-    "AD-03": "lương về tài khoản HLB đều hằng tháng",
-    "AD-07": "thu nhập trên Grab đều đặn 10 tháng",
-    "AD-08": "doanh số 6 tháng ổn định, tỷ lệ hoàn trả thấp",
-    "AD-04": "bạn nạp tiền vào ví đều đặn",
-    "B-02": "hồ sơ CIC không có nợ xấu",
+    "AD-01": tKey("Ví của bạn có thu nhập đều đặn 12 tháng"),
+    "AD-05": tKey("Hóa đơn điện nước trả đúng hạn"),
+    "AD-03": tKey("Lương về tài khoản HLB đều hằng tháng"),
+    "AD-07": tKey("Thu nhập trên Grab đều đặn 10 tháng"),
+    "AD-08": tKey("Doanh số 6 tháng ổn định, tỷ lệ hoàn trả thấp"),
+    "AD-04": tKey("Bạn nạp tiền vào ví đều đặn"),
+    "B-02": tKey("Hồ sơ CIC không có nợ xấu"),
   };
   const reasons = dataUsed.map((d) => why[d.sourceId]).filter(Boolean);
-  const text = reasons.length ? reasons[0].charAt(0).toUpperCase() + reasons[0].slice(1) + (reasons[1] ? `; ${reasons[1]}.` : ".") : "Hồ sơ đáp ứng điều kiện trong hạn mức hiện tại.";
+  // Catalogue phrases are sentence-case; the second one continues the sentence in lower case.
+  const text = reasons[1] ? tKey("{0}; {1}.", reasons[0], reasons[1].charAt(0).toLowerCase() + reasons[1].slice(1)) : reasons[0] ? tKey("{0}.", reasons[0]) : tKey("Hồ sơ đáp ứng điều kiện trong hạn mức hiện tại.");
   return {
     ...base,
     outcome: "APPROVED",

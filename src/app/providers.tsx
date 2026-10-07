@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { getDb, saveDb } from "@/mocks/db";
 import type { ScenarioName } from "@/api/types";
-import { t, useLocale } from "@/i18n";
+import { restoreLocale, setLocale, t } from "@/i18n";
 import { useFlow } from "@/store/flow";
 
 const MOCK = process.env.NEXT_PUBLIC_API_MODE !== "live";
@@ -30,13 +30,14 @@ function startWorker() {
 function MswGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(!MOCK);
   useEffect(() => {
-    if (!MOCK) return;
+    if (!MOCK) { restoreLocale(); return; }
     let cancelled = false;
     (async () => {
       await startWorker();
       const params = new URLSearchParams(window.location.search);
       const lang = params.get("lang");
-      if (lang === "vi" || lang === "en") useLocale.getState().setLocale(lang);
+      if (lang === "vi" || lang === "en") await setLocale(lang);
+      else restoreLocale();
       const q = params.get("scenario");
       const db = getDb();
       if (q) {

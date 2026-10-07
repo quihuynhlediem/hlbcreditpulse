@@ -7,11 +7,11 @@ import type { Appeal } from "@/api/types";
 import { ApprovalStep } from "@/components/console/ApprovalStep";
 import { ConsoleFrame } from "@/components/console/ConsoleFrame";
 import { Btn, Card, Chip, ErrorBox, KV, Skel } from "@/components/ui";
-import { tr, useT } from "@/i18n";
+import { tr, useT, tKey } from "@/i18n";
 import { vnd } from "@/lib/format";
 import { APPEAL_NAMES, OUTCOME_NAMES, PARTNER_NAMES } from "@/lib/names";
 
-const REASONS = [["INCOME_VERIFIED", "Đã xác minh thu nhập"], ["NEW_EVIDENCE", "Khách cung cấp thêm bằng chứng"], ["SHARED_DEVICE_EXPLAINED", "Đã giải thích thiết bị dùng chung"], ["POLICY_CORRECT", "Quyết định của AI đúng chính sách"], ["RISK_TOO_HIGH", "Rủi ro vẫn cao"]] as const;
+const REASONS = [["INCOME_VERIFIED", tKey("Đã xác minh thu nhập")], ["NEW_EVIDENCE", tKey("Khách cung cấp thêm bằng chứng")], ["SHARED_DEVICE_EXPLAINED", tKey("Đã giải thích thiết bị dùng chung")], ["POLICY_CORRECT", tKey("Quyết định của AI đúng chính sách")], ["RISK_TOO_HIGH", tKey("Rủi ro vẫn cao")]] as const;
 const AUTHORITY = 20_000_000;
 
 function due(a: Appeal, now: number, t: (s: string, ...a: (string | number)[]) => string) {
@@ -80,7 +80,7 @@ export default function Appeals() {
   const open = data?.filter((a) => a.status !== "UPHELD" && a.status !== "OVERTURNED") ?? [];
   const done = data?.filter((a) => a.status === "UPHELD" || a.status === "OVERTURNED") ?? [];
   return (
-    <ConsoleFrame scr="SCR-63" title="Hàng chờ xem xét lại" subtitle="AI quyết định mọi hồ sơ. Chuyên viên chỉ xem lại khi khách hàng yêu cầu, và trả lời trong 2 ngày làm việc.">
+    <ConsoleFrame scr="SCR-63" title={tKey("Hàng chờ xem xét lại")} subtitle={tKey("AI quyết định mọi hồ sơ. Chuyên viên chỉ xem lại khi khách hàng yêu cầu, và trả lời trong 2 ngày làm việc.")}>
       {isError ? <ErrorBox onRetry={() => refetch()}>{t("Không tải được danh sách yêu cầu.")}</ErrorBox> : isLoading ? <Skel className="h-32" /> : (
         <div className="space-y-3">
           {open.length === 0 ? <p className="rounded-xl bg-card p-4 text-sm text-muted" data-testid="empty">{t("Không có yêu cầu xem xét lại nào.")}</p> : open.map((a) => <AppealCard key={a.appealId} a={a} now={now} />)}

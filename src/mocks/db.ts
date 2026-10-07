@@ -1,6 +1,7 @@
 import type { ApiCall, Appeal, ConsentReceipt, Contract, Decision, Instalment, Loan, Policy, ProductType, ScenarioName, RankingWeights } from "@/api/types";
 import { CUSTOMERS, SEED_RECEIPTS, WEIGHTS } from "./fixtures";
 import { money } from "./engine";
+import { tKey } from "@/i18n";
 
 const KEY = "hlb-creditpulse-demo";
 const VERSION = 6;
@@ -112,18 +113,18 @@ function seed(): DB {
     mk("cus_chi", "viettel-money", "PAYMENT_INSTALLMENT", 18_000_000, "DECLINED", 1700, 4),
   ];
   decisions[4].reasonCodes = ["DEVICE_SHARED"]; decisions[4].ratings.integrity = "REVIEW";
-  decisions[4].explanationText = "Thiết bị này được nhiều người dùng để đăng ký vay, nên số tiền được duyệt thấp hơn đề nghị.";
-  decisions[5].reasonCodes = ["INCOME_LOW"]; decisions[5].explanationText = "Thu nhập ước tính chưa đủ so với khoản trả hằng tháng.";
-  decisions[6].reasonCodes = ["AFFORDABILITY"]; decisions[6].explanationText = "Khoản trả hằng tháng vượt khả năng chi trả ước tính (mức trần DTI).";
+  decisions[4].explanationText = tKey("Thiết bị này được nhiều người dùng để đăng ký vay, nên số tiền được duyệt thấp hơn đề nghị.");
+  decisions[5].reasonCodes = ["INCOME_LOW"]; decisions[5].explanationText = tKey("Thu nhập ước tính chưa đủ so với khoản trả hằng tháng.");
+  decisions[6].reasonCodes = ["AFFORDABILITY"]; decisions[6].explanationText = tKey("Khoản trả hằng tháng vượt khả năng chi trả ước tính (mức trần DTI).");
   const ap = (d: StoredDecision, ref: string, hoursAgo: number, dueInHours: number, note: string, extra: Partial<Appeal> = {}) => ({
     appealId: newId(), referenceNo: `HLB-XL-2026-000${120 + Math.round(hoursAgo)}`, decisionId: d.decisionId, customerRef: ref, customerMask: `cus_…${ref.replace("cus_", "").slice(0, 6)}`,
     partnerId: d.partnerId as never, productType: d.productType, aiOutcome: d.outcome, requestedAmount: money(d.amount), aiAmount: d.approvedAmount, reasonCodes: d.reasonCodes, note, channel: "PARTNER_APP" as const,
     status: "OPEN" as const, createdAt: new Date(now.getTime() - hoursAgo * 3_600_000).toISOString(), dueAt: new Date(now.getTime() + dueInHours * 3_600_000).toISOString(), slaState: "GREEN" as const, ...extra,
   });
   const appeals = [
-    ap(decisions[4], "cus_binh", 6, 30, "Điện thoại này là của gia đình tôi, mọi người dùng chung. Tôi có lương ổn định, mong HLB xem xét lại."),
-    ap(decisions[5], "cus_lan", 52, -4, "Tháng trước tôi nghỉ ốm hai tuần nên thu nhập giảm. Bình thường tôi chạy đều mỗi ngày."),
-    ap(decisions[6], "cus_chi", 70, -22, "Tôi vừa được tăng lương.", { status: "OVERTURNED" as const, outcome: "OVERTURNED" as const, outcomeReasonCode: "INCOME_VERIFIED", newOffer: money(18_000_000), decidedBy: "reviewer.demo@hlb", decidedAt: addDays(now, -1).toISOString(), offerValidUntil: addDays(now, 6).toISOString() }),
+    ap(decisions[4], "cus_binh", 6, 30, tKey("Điện thoại này là của gia đình tôi, mọi người dùng chung. Tôi có lương ổn định, mong HLB xem xét lại.")),
+    ap(decisions[5], "cus_lan", 52, -4, tKey("Tháng trước tôi nghỉ ốm hai tuần nên thu nhập giảm. Bình thường tôi chạy đều mỗi ngày.")),
+    ap(decisions[6], "cus_chi", 70, -22, tKey("Tôi vừa được tăng lương."), { status: "OVERTURNED" as const, outcome: "OVERTURNED" as const, outcomeReasonCode: "INCOME_VERIFIED", newOffer: money(18_000_000), decidedBy: "reviewer.demo@hlb", decidedAt: addDays(now, -1).toISOString(), offerValidUntil: addDays(now, 6).toISOString() }),
   ];
   return {
     version: VERSION, scenario: "APPROVE", emptyMode: false,

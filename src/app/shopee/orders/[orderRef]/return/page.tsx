@@ -14,7 +14,7 @@ import { useLocale, useT } from "@/i18n";
 
 export default function ReturnRequest() {
   const t = useT();
-  const locale = useLocale((s) => s.locale);
+  const { locale } = useLocale();
   const { orderRef } = useParams<{ orderRef: string }>();
   const router = useRouter();
   const persona = useFlow((s) => s.persona);

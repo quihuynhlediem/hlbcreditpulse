@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useCreateAppeal, useDecision } from "@/api/hooks";
 import { track } from "@/api/track";
 import { Btn, Card, Chip, ErrorBox, Lockup, Skel } from "@/components/ui";
-import { lc, tr, useT } from "@/i18n";
+import { lc, tr, useT, tKey } from "@/i18n";
 import { vnd } from "@/lib/format";
 import { SOURCE_BY_ID } from "@/mocks/fixtures";
 import { BottomBar } from "./PhoneShell";
@@ -14,7 +14,7 @@ const dmyFull = (iso: string) => { const d = new Date(iso); return `${String(d.g
  * Decision screen (SCR-27, 45, 56). The engine always decides (R-25, D-77): approved, counter-offer or not approved,
  * with plain reasons and a path. A counter-offer or a decline can be sent for human reassessment (US-78, D-78). Never shows a score.
  */
-export function DecisionView({ decisionId, unit = "6 tháng", terms, onContinue, onSmaller, onOther, onConnect, continueLabel = "Tiếp tục ký hợp đồng", acceptCounter = false }: {
+export function DecisionView({ decisionId, unit = tKey("{0} tháng", 6), terms, onContinue, onSmaller, onOther, onConnect, continueLabel = tKey("Tiếp tục ký hợp đồng"), acceptCounter = false }: {
   decisionId?: string;
   unit?: string;
   terms?: string;

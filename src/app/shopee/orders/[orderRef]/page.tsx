@@ -9,7 +9,7 @@ import { vnd, vndCompact } from "@/lib/format";
 import { useProductLoan } from "@/lib/useLoan";
 import { useOrder, useShopperWallet } from "@/lib/wallet";
 import { useFlow } from "@/store/flow";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 function Order() {
   const t = useT();
@@ -24,7 +24,7 @@ function Order() {
   useEffect(() => { if (result) track("order_returned", { status: result }); }, [result]);
 
   if (result === "paid" || result === "cancelled" || result === "failed" || result === "cod") {
-    const title = t(result === "paid" || result === "cod" ? "Đặt hàng thành công" : result === "cancelled" ? "Bạn đã hủy thanh toán trả góp" : "Thanh toán chưa hoàn tất. Đơn hàng chưa bị trừ tiền.");
+    const title = t(result === "paid" || result === "cod" ? tKey("Đặt hàng thành công") : result === "cancelled" ? tKey("Bạn đã hủy thanh toán trả góp") : tKey("Thanh toán chưa hoàn tất. Đơn hàng chưa bị trừ tiền."));
     const good = result === "paid" || result === "cod";
     const monthly = loan?.schedule[0]?.amount.amount;
     return (

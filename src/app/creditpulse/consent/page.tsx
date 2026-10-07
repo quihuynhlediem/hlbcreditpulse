@@ -4,9 +4,9 @@ import { ConsoleFrame, Table } from "@/components/console/ConsoleFrame";
 import { Card, Chip, ErrorBox, Skel } from "@/components/ui";
 import { dmy } from "@/lib/format";
 import { PARTNER_NAMES } from "@/lib/names";
-import { tr, useT } from "@/i18n";
+import { tr, useT, tKey } from "@/i18n";
 
-const TIA: Record<string, string> = { FILED: "Đã nộp hồ sơ", IN_PROGRESS: "Đang chuẩn bị", NOT_STARTED: "Chưa bắt đầu" };
+const TIA: Record<string, string> = { FILED: tKey("Đã nộp hồ sơ"), IN_PROGRESS: tKey("Đang chuẩn bị"), NOT_STARTED: tKey("Chưa bắt đầu") };
 
 /** SCR-65 consent ledger and cross-border transfer impact assessment register. */
 export default function Consent() {
@@ -19,13 +19,13 @@ export default function Consent() {
     const a = document.createElement("a"); a.href = url; a.download = "creditpulse-consent-ledger.csv"; a.click(); URL.revokeObjectURL(url);
   };
   return (
-    <ConsoleFrame scr="SCR-65" title="Đồng ý và TIA" subtitle="Biên lai đồng ý của khách hàng theo từng nguồn dữ liệu, kèm tình trạng đánh giá tác động chuyển dữ liệu ra nước ngoài." actions={<button onClick={csv} className="rounded-lg border border-line bg-card px-3 py-2 text-[13px] font-semibold">{t("Xuất CSV")}</button>}>
+    <ConsoleFrame scr="SCR-65" title={tKey("Đồng ý và TIA")} subtitle={tKey("Biên lai đồng ý của khách hàng theo từng nguồn dữ liệu, kèm tình trạng đánh giá tác động chuyển dữ liệu ra nước ngoài.")} actions={<button onClick={csv} className="rounded-lg border border-line bg-card px-3 py-2 text-[13px] font-semibold">{t("Xuất CSV")}</button>}>
       <Card className="space-y-1" data-testid="tia">
         <h2 className="text-sm font-bold">{t("Đánh giá tác động chuyển dữ liệu (TIA)")}</h2>
         {tia.isLoading ? <Skel className="h-6" /> : <p className="text-[13px]">{tia.data ? t(TIA[tia.data.status]) : "—"}{tia.data?.filedAt ? ` · ${dmy(tia.data.filedAt)}` : ""}</p>}
       </Card>
       {isError ? <ErrorBox onRetry={() => refetch()}>{t("Không tải được sổ đồng ý.")}</ErrorBox> : isLoading ? <Skel className="h-40" /> : !data || data.length === 0 ? <p className="rounded-xl bg-card p-4 text-sm text-muted" data-testid="empty">{t("Chưa có đồng ý nào.")}</p> : (
-        <Table testId="ledger" head={["Thời gian", "Khách hàng", "Đối tác", "Nguồn", "Mục đích", "Trạng thái"]}>
+        <Table testId="ledger" head={[tKey("Thời gian"), tKey("Khách hàng"), tKey("Đối tác"), tKey("Nguồn"), tKey("Mục đích"), tKey("Trạng thái")]}>
           {data.map((c) => (
             <tr key={c.receiptId} data-testid="ledger-row" data-status={c.status}>
               <td className="px-3 py-2">{dmy(c.at)}</td><td className="px-3 py-2">{c.customerMask}</td><td className="px-3 py-2">{PARTNER_NAMES[c.partnerId]}</td><td className="px-3 py-2 font-semibold">{c.sourceId}</td><td className="px-3 py-2">{tr(c.purpose)}</td>

@@ -10,7 +10,7 @@ import { useWallet } from "@/lib/wallet";
 import { ErrorBox } from "@/components/ui";
 import { eirText, vnd } from "@/lib/format";
 import { useFlow } from "@/store/flow";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 /** SCR-27: `new` runs the assessment (loading copy), then replaces the URL with the decision id. */
 export default function Decision() {
@@ -35,7 +35,7 @@ export default function Decision() {
         onError: (e) => {
           if (e instanceof ApiError && e.type?.endsWith("ekyc-required")) router.replace(`${B}/ekyc`);
           else if (e instanceof ApiError && e.type?.endsWith("consent-required")) router.replace(`${B}/limit`);
-          else setErr("Chưa có kết quả. Hồ sơ của bạn được giữ, bạn thử lại nhé.");
+          else setErr(tKey("Chưa có kết quả. Hồ sơ của bạn được giữ, bạn thử lại nhé."));
         },
       },
     );
@@ -43,9 +43,11 @@ export default function Decision() {
   useEffect(() => { if (!isNew || started.current) return; started.current = true; run(); }, [isNew]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pkg = offer?.packages.find((p) => p.packageId === (packageId ?? "pkg-6"));
-  const terms = pkg ? `${pkg.tenorMonths} tháng · ${pkg.eir === 0 ? "0% lãi (người bán chịu)" : `EIR ${eirText(pkg.eir)}`} · Tổng ${vnd(pkg.totalPayable.amount)}` : undefined;
+  const terms = !pkg ? undefined : pkg.eir === 0
+    ? tKey("{0} tháng · 0% lãi (người bán chịu) · Tổng {1}", pkg.tenorMonths, vnd(pkg.totalPayable.amount))
+    : tKey("{0} tháng · EIR {1} · Tổng {2}", pkg.tenorMonths, eirText(pkg.eir), vnd(pkg.totalPayable.amount));
   return (
-    <WalletFrame scr="SCR-27" title="Kết quả xét duyệt" back={() => router.push(`${B}`)}>
+    <WalletFrame scr="SCR-27" title={tKey("Kết quả xét duyệt")} back={() => router.push(`${B}`)}>
       {err ? <div className="p-4"><ErrorBox onRetry={() => { started.current = true; run(); }}>{t(err)}</ErrorBox></div> : (
         <DecisionView
           decisionId={isNew ? undefined : decisionId}

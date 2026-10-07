@@ -1,0 +1,7 @@
+allowBuilds:
+  '@swc/core': false
+  msw: true
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - react-i18next@17.0.16
+  - i18next-cli@1.74.8

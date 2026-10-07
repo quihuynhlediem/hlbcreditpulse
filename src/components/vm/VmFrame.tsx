@@ -3,11 +3,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BottomBar, Header, PhoneShell } from "@/components/kit/PhoneShell";
 import { cn } from "@/lib/cn";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 export function VmNav({ active }: { active: string }) {
   const t = useT();
-  const items = [["Trang chủ", "/viettel-money"], ["Ưu đãi", "/viettel-money"], ["Quét QR", "/viettel-money"], ["Hạn mức", "/viettel-money/limit?from=hub"], ["Tài khoản", "/viettel-money/privacy"]] as const;
+  const items = [[tKey("Trang chủ"), "/viettel-money"], [tKey("Ưu đãi"), "/viettel-money"], [tKey("Quét QR"), "/viettel-money"], [tKey("Hạn mức"), "/viettel-money/limit?from=hub"], [tKey("Tài khoản"), "/viettel-money/privacy"]] as const;
   return (
     <nav className="flex shrink-0 justify-between border-t border-line bg-card px-2 py-2.5" aria-label={t("Điều hướng ví")}>
       {items.map(([l, href]) => (

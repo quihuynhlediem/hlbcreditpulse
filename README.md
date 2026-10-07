@@ -15,3 +15,16 @@ Presenter bar (top): read-only persona (chosen by the entry point on the launche
 
 The AI engine decides every application (approve, counter-offer or decline) within 10 s. A customer can ask HLB to reassess a counter-offer or decline; reviewers answer in the console under **Reassessment queue** (overturns above 20,000,000 ₫ need a second approver).
 Switch to a real backend with `NEXT_PUBLIC_API_MODE=live` (Stage 2; demo routes are removed from that build by `src/proxy.ts`). Console policy and weight changes go through maker-checker approval: submit, then approve as Checker.
+
+## Languages (i18next)
+
+English is the default; the EN/VI switch is remembered per browser. Copy lives in `src/i18n/locales/{en,vi}.json`, keyed by the Vietnamese source sentence. Placeholders are positional (`t("Xin chào, {0}", name)`) or named; `{count}` selects English plural forms (`_one` / `_other`).
+
+- In components: `const t = useT()`. Outside components: `t` (or `tr` for API values) from `@/i18n`.
+- Vietnamese text kept in data constants, props passed to shared components, or mock content: wrap it in `tKey("…")` so it is extracted; it is translated where it renders.
+- The mock API serves content in the language of the `Accept-Language` header.
+
+```
+pnpm i18n:extract   # add new keys (English left empty to translate), drop unused ones
+pnpm i18n:check     # fails if the catalogues are stale or an English entry is missing
+```

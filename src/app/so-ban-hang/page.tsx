@@ -3,15 +3,15 @@ import { HlbWalletCards } from "@/components/kit/HlbWalletCards";
 import { SbhFrame } from "@/components/sbh/SbhFrame";
 import { Card } from "@/components/ui";
 import { vndCompact } from "@/lib/format";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
-const ACTIONS = [["Tạo mới đơn hàng", "+", "bg-primary"], ["Quản lý khách hàng", "☺", "bg-blue-500"], ["Quản lý sản phẩm", "▣", "bg-amber-500"], ["Quản lý khuyến mãi", "%", "bg-orange-500"]] as const;
+const ACTIONS = [[tKey("Tạo mới đơn hàng"), "+", "bg-primary"], [tKey("Quản lý khách hàng"), "☺", "bg-blue-500"], [tKey("Quản lý sản phẩm"), "▣", "bg-amber-500"], [tKey("Quản lý khuyến mãi"), "%", "bg-orange-500"]] as const;
 
 /** SCR-50 Sổ Bán Hàng store management: today's sales, quick actions, orders and the "Vốn kinh doanh" card. */
 export default function SbhHome() {
   const t = useT();
   return (
-    <SbhFrame scr="SCR-50" nav="Cửa hàng">
+    <SbhFrame scr="SCR-50" nav={tKey("Cửa hàng")}>
       <div className="bg-primary px-4 pb-6 pt-1">
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-xl bg-card p-3 text-center"><div className="text-[11px] text-muted">{t("Doanh thu hôm nay")}</div><div className="text-base font-bold text-ink" data-testid="today-sales">{vndCompact(3_285_000)}</div></div>

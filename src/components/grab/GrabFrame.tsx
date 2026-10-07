@@ -3,11 +3,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BottomBar, Header, PhoneShell } from "@/components/kit/PhoneShell";
 import { cn } from "@/lib/cn";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 export interface FrameProps { scr: string; title?: string; back?: string | (() => void); footer?: React.ReactNode; nav?: string; children: React.ReactNode }
 
-const NAV = [["Trang chủ", "/grab", "⌂"], ["Hoạt động", "/grab", "☰"], ["Thu nhập", "/grab/earnings", "₫"], ["Tài khoản", "/grab", "☺"]] as const;
+const NAV = [[tKey("Trang chủ"), "/grab", "⌂"], [tKey("Hoạt động"), "/grab", "☰"], [tKey("Thu nhập"), "/grab/earnings", "₫"], [tKey("Tài khoản"), "/grab", "☺"]] as const;
 
 export function GrabNav({ active }: { active: string }) {
   const t = useT();

@@ -7,9 +7,9 @@ import { ApprovalStep } from "@/components/console/ApprovalStep";
 import { Btn, Card, ErrorBox, Skel } from "@/components/ui";
 import { WEIGHTS } from "@/mocks/fixtures";
 import { dec } from "@/lib/format";
-import { tr, useT } from "@/i18n";
+import { tr, useT, tKey } from "@/i18n";
 
-const KEYS = [["predictive", "Dự báo"], ["coverage", "Độ phủ"], ["cost", "Chi phí"], ["access", "Khả năng truy cập"], ["legal", "Pháp lý"]] as const;
+const KEYS = [["predictive", tKey("Dự báo")], ["coverage", tKey("Độ phủ")], ["cost", tKey("Chi phí")], ["access", tKey("Khả năng truy cập")], ["legal", tKey("Pháp lý")]] as const;
 type K = (typeof KEYS)[number][0];
 
 /** SCR-62 alternative-data ranking (R-16, D-20): editable weights, scores, ranks, waterfall order, segment × rung matrix. */
@@ -26,14 +26,14 @@ export default function Ranking() {
   const submit = () => {
     if (!w) return;
     setErr(null); setSaved(false);
-    save.mutate({ config: { weights: Object.fromEntries(KEYS.map(([k]) => [k, (w[k] || 0) / 100])) }, reason: "Điều chỉnh trọng số xếp hạng dữ liệu" }, {
+    save.mutate({ config: { weights: Object.fromEntries(KEYS.map(([k]) => [k, (w[k] || 0) / 100])) }, reason: tKey("Điều chỉnh trọng số xếp hạng dữ liệu") }, {
       onSuccess: (a) => setPending(a as never),
-      onError: (e: Error) => setErr(e instanceof ApiError ? e.message : "Không lưu được. Thử lại."),
+      onError: (e: Error) => setErr(e instanceof ApiError ? e.message : tKey("Không lưu được. Thử lại.")),
     });
   };
   const reset = () => setW(Object.fromEntries(KEYS.map(([k]) => [k, Math.round(WEIGHTS[k] * 100)])) as Record<K, number>);
   return (
-    <ConsoleFrame scr="SCR-62" title="Xếp hạng dữ liệu thay thế" subtitle="Điểm = 30% dự báo + 25% độ phủ + 15% chi phí + 15% truy cập + 15% pháp lý (mặc định). Thay đổi tạo bản nháp chính sách và cần người duyệt khác (maker-checker).">
+    <ConsoleFrame scr="SCR-62" title={tKey("Xếp hạng dữ liệu thay thế")} subtitle={tKey("Điểm = 30% dự báo + 25% độ phủ + 15% chi phí + 15% truy cập + 15% pháp lý (mặc định). Thay đổi tạo bản nháp chính sách và cần người duyệt khác (maker-checker).")}>
       {isError ? <ErrorBox onRetry={() => refetch()}>{t("Không tải được bảng xếp hạng.")}</ErrorBox> : isLoading || !data || !w ? <div className="space-y-2" aria-busy><Skel className="h-24" /><Skel className="h-64" /></div> : (
         <>
           <Card className="space-y-3" data-testid="weights">
@@ -53,7 +53,7 @@ export default function Ranking() {
             {pending && <ApprovalStep approval={pending} onApproved={() => { setPending(null); setSaved(true); }} />}
             {saved && <p role="status" className="text-[13px] font-semibold text-success" data-testid="weights-saved">{t("Đã duyệt và áp dụng. Điểm và thứ hạng đã được tính lại.")}</p>}
           </Card>
-          <Table testId="ranking-table" head={["Hạng", "Nguồn", "Điểm", "Dự báo", "Độ phủ", "Chi phí", "Truy cập", "Pháp lý"]}>
+          <Table testId="ranking-table" head={[tKey("Hạng"), tKey("Nguồn"), tKey("Điểm"), tKey("Dự báo"), tKey("Độ phủ"), tKey("Chi phí"), tKey("Truy cập"), tKey("Pháp lý")]}>
             {data.sources.map((s) => (
               <tr key={s.sourceId} data-testid="rank-row" data-source={s.sourceId}>
                 <td className="px-3 py-2 font-bold">{s.rank}</td>
@@ -69,7 +69,7 @@ export default function Ranking() {
           </Card>
           <section className="space-y-2">
             <h2 className="text-sm font-bold">{t("Phân khúc × bậc thang")}</h2>
-            <Table testId="segment-matrix" head={["Phân khúc", "Bậc 1", "Bậc 2", "Bậc 3", "Bậc 4", "Bậc 5"]}>
+            <Table testId="segment-matrix" head={[tKey("Phân khúc"), tKey("Bậc 1"), tKey("Bậc 2"), tKey("Bậc 3"), tKey("Bậc 4"), tKey("Bậc 5")]}>
               {data.segmentRungMatrix.map((r) => <tr key={r.segment}><td className="px-3 py-2 font-semibold">{r.segment}</td>{[0, 1, 2, 3, 4].map((i) => <td key={i} className="px-3 py-2">{r.rungs?.[i]?.join(" + ") ?? "—"}</td>)}</tr>)}
             </Table>
           </section>

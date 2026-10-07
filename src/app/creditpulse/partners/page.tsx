@@ -4,7 +4,7 @@ import { useApiCalls, usePartners, useRotateCredential, useSendTestWebhook } fro
 import { ConsoleFrame, Table } from "@/components/console/ConsoleFrame";
 import { Btn, ErrorBox, Skel } from "@/components/ui";
 import { PRODUCT_NAMES } from "@/lib/names";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 /** SCR-67 partners, products and webhooks. Sandbox keys are masked; a rotated secret is shown once (AC-65.2). */
 export default function Partners() {
@@ -16,9 +16,9 @@ export default function Partners() {
   const test = useSendTestWebhook();
   const hooks = (calls.data ?? []).filter((c) => c.method === "WEBHOOK");
   return (
-    <ConsoleFrame scr="SCR-67" title="Đối tác, sản phẩm và webhook" subtitle="Ba đối tác sở hữu màn hình; HLB là bên cho vay (D-32).">
+    <ConsoleFrame scr="SCR-67" title={tKey("Đối tác, sản phẩm và webhook")} subtitle={tKey("Ba đối tác sở hữu màn hình; HLB là bên cho vay (D-32).")}>
       {isError ? <ErrorBox onRetry={() => refetch()}>{t("Không tải được danh sách đối tác.")}</ErrorBox> : isLoading ? <Skel className="h-40" /> : !data || data.length === 0 ? <p className="rounded-xl bg-card p-4 text-sm text-muted" data-testid="empty">{t("Chưa có đối tác.")}</p> : (
-        <Table testId="partners" head={["Đối tác", "Sản phẩm", "Tài khoản thanh toán", "Khóa sandbox", ""]}>
+        <Table testId="partners" head={[tKey("Đối tác"), tKey("Sản phẩm"), tKey("Tài khoản thanh toán"), tKey("Khóa sandbox"), ""]}>
           {data.map((p) => (
             <tr key={p.partnerId} data-testid="partner-row">
               <td className="px-3 py-2 font-semibold">{p.name}</td>
@@ -45,7 +45,7 @@ export default function Partners() {
       <section className="space-y-2">
         <h2 className="text-sm font-bold">{t("Nhật ký webhook")}</h2>
         {hooks.length === 0 ? <p className="rounded-xl bg-card p-4 text-sm text-muted" data-testid="webhook-empty">{t("Chưa có webhook nào.")}</p> : (
-          <Table testId="webhook-log" head={["Thời gian", "Sự kiện", "Trạng thái", "Độ trễ"]}>
+          <Table testId="webhook-log" head={[tKey("Thời gian"), tKey("Sự kiện"), tKey("Trạng thái"), tKey("Độ trễ")]}>
             {hooks.slice(0, 20).map((h) => <tr key={h.callId} data-testid="webhook-row"><td className="px-3 py-2">{new Date(h.at).toLocaleTimeString(t("vi-VN"))}</td><td className="px-3 py-2 font-semibold">{h.path}</td><td className="px-3 py-2">{h.status}</td><td className="px-3 py-2">{h.latencyMs} ms</td></tr>)}
           </Table>
         )}

@@ -4,21 +4,21 @@ import { useCreateConsent } from "@/api/hooks";
 import { track } from "@/api/track";
 import type { PartnerId, SourceId } from "@/api/types";
 import { Btn, Chip, ErrorBox, Lockup } from "@/components/ui";
-import { useT } from "@/i18n";
+import { useT, tKey } from "@/i18n";
 
 interface ConsentCopy { title: string; read: string; purpose: string; retention: string }
-const RETAIN = "12 tháng kể từ ngày bạn đồng ý, hoặc đến khi bạn rút lại.";
-const WITHDRAW = "Bất cứ lúc nào tại Cài đặt > Quyền riêng tư và dữ liệu.";
+const RETAIN = tKey("12 tháng kể từ ngày bạn đồng ý, hoặc đến khi bạn rút lại.");
+const WITHDRAW = tKey("Bất cứ lúc nào tại Cài đặt > Quyền riêng tư và dữ liệu.");
 
 /** Consent text is supplied by HLB (D-30). Only the partner's own data and HLB's own data are offered (R-22). */
 export const CONSENT_COPY: Partial<Record<SourceId, (partner: string) => ConsentCopy>> = {
-  "AD-01": (p) => ({ title: `Chia sẻ lịch sử giao dịch ví với Hong Leong Bank`, read: `Thời gian dùng ví, số tiền nạp/rút đều đặn, thanh toán hóa đơn. Chỉ dữ liệu từ ${p}; không đọc nội dung tin nhắn hay danh bạ.`, purpose: "Đánh giá khả năng trả nợ để tăng hạn mức trả góp của bạn.", retention: RETAIN }),
-  "AD-05": (p) => ({ title: "Chia sẻ lịch sử thanh toán hóa đơn với Hong Leong Bank", read: `Hóa đơn điện, nước, internet đã trả qua ${p} và việc trả đúng hạn. Không đọc địa điểm của bạn.`, purpose: "Đánh giá khả năng trả nợ và tăng hạn mức.", retention: RETAIN }),
-  "AD-04": (p) => ({ title: "Chia sẻ hành vi nạp tiền của ví với Hong Leong Bank", read: `Nhịp nạp tiền và thời gian sử dụng ví tại ${p}. Không dùng dữ liệu của tập đoàn mẹ.`, purpose: "Đánh giá mức ổn định.", retention: RETAIN }),
-  "AD-03": () => ({ title: "Dùng lịch sử lương tại tài khoản HLB của bạn", read: "Khoản lương về đều hằng tháng, số tháng nhận lương, mức lương. Đây là dữ liệu của chính Hong Leong Bank.", purpose: "Tăng hạn mức và xét khả năng chi trả.", retention: RETAIN }),
-  "B-02": () => ({ title: "Tra cứu hồ sơ tín dụng CIC", read: "Nghĩa vụ hiện có, số tổ chức cho vay, lịch sử nợ. Bắt buộc khi xét vay có trách nhiệm.", purpose: "Xét hạn mức và ngăn vay chồng chéo.", retention: RETAIN }),
-  "AD-07": () => ({ title: "Chia sẻ thu nhập của bạn trên ứng dụng Grab với Hong Leong Bank", read: "Thu nhập mỗi kỳ, số ngày hoạt động, thời gian làm đối tác. Chỉ dữ liệu trên ứng dụng Grab; không dùng dữ liệu của GrabFin hay công ty liên kết.", purpose: "Xét hạn mức vay nhanh và mức khấu trừ theo thu nhập.", retention: RETAIN }),
-  "AD-08": () => ({ title: "Chia sẻ doanh thu và thanh toán của cửa hàng với Hong Leong Bank", read: "Doanh số theo ngày, số đơn, tỷ lệ hoàn trả, tiền hàng về. Chỉ dữ liệu từ Sổ Bán Hàng; không đọc dữ liệu từ ngân hàng khác.", purpose: "Xét hạn mức vay vốn kinh doanh và mức trả theo doanh thu.", retention: RETAIN }),
+  "AD-01": (p) => ({ title: tKey("Chia sẻ lịch sử giao dịch ví với Hong Leong Bank"), read: tKey("Thời gian dùng ví, số tiền nạp/rút đều đặn, thanh toán hóa đơn. Chỉ dữ liệu từ {0}; không đọc nội dung tin nhắn hay danh bạ.", p), purpose: tKey("Đánh giá khả năng trả nợ để tăng hạn mức trả góp của bạn."), retention: RETAIN }),
+  "AD-05": (p) => ({ title: tKey("Chia sẻ lịch sử thanh toán hóa đơn với Hong Leong Bank"), read: tKey("Hóa đơn điện, nước, internet đã trả qua {0} và việc trả đúng hạn. Không đọc địa điểm của bạn.", p), purpose: tKey("Đánh giá khả năng trả nợ và tăng hạn mức."), retention: RETAIN }),
+  "AD-04": (p) => ({ title: tKey("Chia sẻ hành vi nạp tiền của ví với Hong Leong Bank"), read: tKey("Nhịp nạp tiền và thời gian sử dụng ví tại {0}. Không dùng dữ liệu của tập đoàn mẹ.", p), purpose: tKey("Đánh giá mức ổn định."), retention: RETAIN }),
+  "AD-03": () => ({ title: tKey("Dùng lịch sử lương tại tài khoản HLB của bạn"), read: tKey("Khoản lương về đều hằng tháng, số tháng nhận lương, mức lương. Đây là dữ liệu của chính Hong Leong Bank."), purpose: tKey("Tăng hạn mức và xét khả năng chi trả."), retention: RETAIN }),
+  "B-02": () => ({ title: tKey("Tra cứu hồ sơ tín dụng CIC"), read: tKey("Nghĩa vụ hiện có, số tổ chức cho vay, lịch sử nợ. Bắt buộc khi xét vay có trách nhiệm."), purpose: tKey("Xét hạn mức và ngăn vay chồng chéo."), retention: RETAIN }),
+  "AD-07": () => ({ title: tKey("Chia sẻ thu nhập của bạn trên ứng dụng Grab với Hong Leong Bank"), read: tKey("Thu nhập mỗi kỳ, số ngày hoạt động, thời gian làm đối tác. Chỉ dữ liệu trên ứng dụng Grab; không dùng dữ liệu của GrabFin hay công ty liên kết."), purpose: tKey("Xét hạn mức vay nhanh và mức khấu trừ theo thu nhập."), retention: RETAIN }),
+  "AD-08": () => ({ title: tKey("Chia sẻ doanh thu và thanh toán của cửa hàng với Hong Leong Bank"), read: tKey("Doanh số theo ngày, số đơn, tỷ lệ hoàn trả, tiền hàng về. Chỉ dữ liệu từ Sổ Bán Hàng; không đọc dữ liệu từ ngân hàng khác."), purpose: tKey("Xét hạn mức vay vốn kinh doanh và mức trả theo doanh thu."), retention: RETAIN }),
 };
 
 export function ConsentSheet({ sourceId, customerRef, partnerId, partnerName, stepLabel, onGranted, onDeclined, declineHint }: { sourceId: SourceId; customerRef: string; partnerId: PartnerId; partnerName: string; stepLabel?: string; onGranted: () => void; onDeclined: () => void; declineHint?: string }) {

@@ -3,9 +3,9 @@ import { useRouter } from "next/navigation";
 import { SbhFrame } from "@/components/sbh/SbhFrame";
 import { Card } from "@/components/ui";
 import { vnd } from "@/lib/format";
-import { useT } from "@/i18n";
+import { tKey, useT } from "@/i18n";
 
-const MONTHS = [["T7", 62_000_000], ["T8", 68_000_000], ["T9", 75_000_000]] as const;
+const MONTHS = [[tKey("T7"), 62_000_000], [tKey("T8"), 68_000_000], [tKey("T9"), 75_000_000]] as const;
 
 /** SCR-51 revenue report with the funding banner (entry C2). */
 export default function Report() {
@@ -13,7 +13,7 @@ export default function Report() {
   const router = useRouter();
   const max = Math.max(...MONTHS.map((m) => m[1]));
   return (
-    <SbhFrame scr="SCR-51" title="Thu chi" back={() => router.push("/so-ban-hang")} nav="Thu chi">
+    <SbhFrame scr="SCR-51" title={tKey("Thu chi")} back={() => router.push("/so-ban-hang")} nav="Thu chi">
       <div className="flex flex-col gap-3 p-4">
         <div className="grid grid-cols-2 gap-3 text-center">
           <Card><div className="text-[11px] text-muted">{t("Tổng tiền thu")}</div><div className="text-base font-bold text-success">{vnd(75_000_000)}</div></Card>
